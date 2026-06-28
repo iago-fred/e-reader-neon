@@ -390,4 +390,53 @@ Sugestão: Python com PIL (pra covers), interface Tkinter ou CLI.
 
 ---
 
-*Última atualização: 17/jun/2026*
+## 📁 Estrutura do Código
+
+```
+src/
+├── main.cpp          ← setup() + loop() — coordena os módulos
+├── botoes.h/.cpp     ← Leitura dos 3 botões (GPIO 32, 33, 25) com debounce + long-press
+├── config.h/.cpp     ← Struct Config, valores padrão, tabela de itens editáveis
+├── deep_sleep.h/.cpp ← Timer de inatividade, entrada em deep sleep, wake por botão
+├── navegacao.h/.cpp  ← Máquina de estados (MENU_LIVROS / LENDO / CONFIG / DORMINDO) e handlers
+└── tela.h/.cpp       ← Renderização da interface (Serial; futuramente e-ink)
+```
+
+### Dependências entre módulos
+
+```
+main.cpp
+  ├── botoes.h      (lerBotoes, initBotoes)
+  ├── navegacao.h   (Estado, handleMenu/...)
+  ├── tela.h        (renderizar)
+  └── deep_sleep.h  (verificarSleep, atualizarTimer)
+
+navegacao.cpp
+  ├── botoes.h      (botoes[].pressed / longPressed)
+  ├── config.h      (configValues, configItem)
+  └── deep_sleep.h  (atualizarTimer)
+
+tela.cpp
+  ├── navegacao.h   (Estado, livros, NUM_LIVROS, livroAtual, paginaAtual, totalPaginas)
+  └── config.h      (configLabels, configValues, configItem)
+
+deep_sleep.cpp
+  └── navegacao.h   (estado para verificar DORMINDO)
+
+botoes.cpp    → (autônomo — só depende de Arduino.h)
+config.cpp    → (autônomo — só depende de Arduino.h)
+```
+
+### Ciclo do loop()
+
+```
+1. lerBotoes()          — atualiza flags pressed/longPressed
+2. verificarSleep()     — se inativo por IDLE_SLEEP_MS → deep sleep
+3. switch(estado)       — handleMenu / handleLendo / handleConfig
+4. se houve input → renderizar()
+5. LED heartbeat + delay(20)
+```
+
+---
+
+*Última atualização: 28/jun/2026*
