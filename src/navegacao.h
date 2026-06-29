@@ -46,6 +46,10 @@ extern int paginaAtual;
 /** Total de páginas do livro em leitura */
 extern int totalPaginas;
 
+// ─── CONFIG MENU ─────────────────────────────────────────
+/** Indica se o menu de configurações está em modo de edição */
+extern bool editMode;
+
 // ─── HANDLERS ────────────────────────────────────────────
 
 /**

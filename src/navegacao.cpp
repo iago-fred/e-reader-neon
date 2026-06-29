@@ -19,6 +19,9 @@ const char* livros[] = {
 const int NUM_LIVROS = 5;
 int livroAtual = 0;
 
+// ─── CONFIG MENU ───────────────────────────────────────────
+bool editMode = false;
+
 // ─── PÁGINAS ─────────────────────────────────────────────
 int paginaAtual = 1;
 int totalPaginas = 42;
@@ -67,21 +70,58 @@ void handleLendo() {
 }
 
 void handleConfig() {
-  if (botoes[0].pressed) {
-    configItem = (configItem - 1 + 5) % 5;
-    atualizarTimer();
-  }
-  if (botoes[1].pressed) {
-    configItem = (configItem + 1) % 5;
-    atualizarTimer();
-  }
-  if (botoes[2].pressed) {
-    (*configValues[configItem]) += 5;
-    if (*configValues[configItem] > 255) *configValues[configItem] = 0;
-    atualizarTimer();
-  }
-  if (botoes[2].longPressed) {
-    estado = (paginaAtual > 0) ? LENDO : MENU_LIVROS;
-    atualizarTimer();
+  if (editMode) {
+    // ─── MODO EDIÇÃO: ▲/▼ ajustam valor ● curto volta ───
+    if (botoes[0].pressed) {
+      switch (configItem) {
+        case 0: if (config.margem < 50) config.margem++; break;
+        case 1: if (config.espacamento < 20) config.espacamento++; break;
+        case 2: if (config.tempo_tela < 30) config.tempo_tela++; break;
+        case 3:
+          config.fonte = (config.fonte == 14) ? 18 : (config.fonte == 18) ? 24 : 14;
+          break;
+        case 4: if (config.leds < 100) config.leds += 5; break;
+      }
+      atualizarTimer();
+    }
+    if (botoes[1].pressed) {
+      switch (configItem) {
+        case 0: if (config.margem > 0) config.margem--; break;
+        case 1: if (config.espacamento > 0) config.espacamento--; break;
+        case 2: if (config.tempo_tela > 1) config.tempo_tela--; break;
+        case 3:
+          config.fonte = (config.fonte == 24) ? 18 : (config.fonte == 18) ? 14 : 24;
+          break;
+        case 4: if (config.leds > 0) config.leds -= 5; break;
+      }
+      atualizarTimer();
+    }
+    if (botoes[2].pressed) {
+      editMode = false;
+      atualizarTimer();
+    }
+    if (botoes[2].longPressed) {
+      editMode = false;
+      estado = (paginaAtual > 0) ? LENDO : MENU_LIVROS;
+      atualizarTimer();
+    }
+  } else {
+    // ─── MODO NAVEGAÇÃO: ▲/▼ navegam ● curto seleciona ───
+    if (botoes[0].pressed) {
+      configItem = (configItem - 1 + 5) % 5;
+      atualizarTimer();
+    }
+    if (botoes[1].pressed) {
+      configItem = (configItem + 1) % 5;
+      atualizarTimer();
+    }
+    if (botoes[2].pressed) {
+      editMode = true;
+      atualizarTimer();
+    }
+    if (botoes[2].longPressed) {
+      estado = (paginaAtual > 0) ? LENDO : MENU_LIVROS;
+      atualizarTimer();
+    }
   }
 }

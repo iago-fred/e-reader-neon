@@ -42,15 +42,25 @@ void renderizar() {
       Serial.println("├────────────────────────────────┤");
       for (int i = 0; i < 5; i++) {
         if (i == configItem) {
-          Serial.printf("│  ▶ %s: %-2d            │\n", configLabels[i], *configValues[i]);
+          if (editMode) {
+            Serial.printf("│  ✏️ %s: %-2d           │\n", configLabels[i], *configValues[i]);
+          } else {
+            Serial.printf("│  ▶ %s: %-2d            │\n", configLabels[i], *configValues[i]);
+          }
         } else {
           Serial.printf("│    %s: %-2d            │\n", configLabels[i], *configValues[i]);
         }
       }
       Serial.println("├────────────────────────────────┤");
-      Serial.println("│  ● curto = alterar | longo =  │");
-      Serial.println("│  voltar ao menu               │");
+      if (editMode) {
+        Serial.println("│  ▲/▼ = ajustar  ● = confirmar │");
+        Serial.println("│  ● (>1s) = sair sem salvar    │");
+      } else {
+        Serial.println("│  ▲/▼ = navegar  ● = editar    │");
+        Serial.println("│  ● (>1s) = voltar ao menu     │");
+      }
       break;
+
 
     default:
       break;
