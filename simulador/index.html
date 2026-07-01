@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📖 Simulador E-Reader Neon</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+
+  body {
+    background: #2a2a2e;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+
+  .ereader {
+    background: #38383d;
+    border-radius: 24px;
+    padding: 28px 24px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border: 1px solid #48484e;
+  }
+
+  /* ── TELA E-INK ── */
+  .screen {
+    width: 540px;
+    height: 720px;
+    background: #f5f0e8;
+    border-radius: 4px;
+    padding: 32px 36px;
+    position: relative;
+    font-family: Georgia, 'New Century Schoolbook', 'Century Schoolbook L', serif;
+    color: #2c2c2c;
+    font-size: 15px;
+    line-height: 1.6;
+    overflow: hidden;
+    box-shadow: inset 0 0 30px rgba(0,0,0,0.04);
+    transition: opacity 0.08s;
+    border: 1px solid #d8d2c4;
+  }
+
+  .screen.refreshing { opacity: 0.75; }
+
+  .screen-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #d8d2c4;
+    font-family: system-ui, sans-serif;
+  }
+
+  .screen-header .title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+    letter-spacing: 0.5px;
+  }
+
+  .screen-header .status {
+    font-size: 11px;
+    color: #888;
+  }
+
+  .screen-content { height: calc(100% - 60px); overflow: hidden; }
+
+  /* ── BOTÕES ── */
+  .btn-row {
+    display: flex;
+    gap: 32px;
+    margin-top: 24px;
+    align-items: center;
+  }
+
+  .btn {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: none;
+    background: #505055;
+    color: #ddd;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.08s;
+    box-shadow: 0 3px 0 #333, 0 4px 8px rgba(0,0,0,0.3);
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    font-weight: 700;
+  }
+  .btn:active, .btn.pressed { transform: translateY(3px); box-shadow: 0 1px 0 #333; }
+  .btn:hover { background: #5a5a60; }
+  .btn-long { background: #3a3a8a; box-shadow: 0 3px 0 #2a2a6a; }
+  .btn-label {
+    font-size: 11px;
+    color: #888;
+    text-align: center;
+    margin-top: 4px;
+  }
+
+  .btn-group { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+
+  /* ── MENU LIVROS ── */
+  .book-list { list-style: none; }
+  .book-item {
+    padding: 10px 14px;
+    margin-bottom: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    transition: background 0.1s;
+  }
+  .book-item.active {
+    background: #dad4c8;
+    font-weight: 600;
+  }
+  .book-item .icon { font-size: 18px; opacity: 0.7; }
+  .book-item.active .icon { opacity: 1; }
+  .book-item .arrow { visibility: hidden; margin-left: auto; color: #888; }
+  .book-item.active .arrow { visibility: visible; }
+
+  .menu-hint {
+    position: absolute;
+    bottom: 16px;
+    left: 0; right: 0;
+    text-align: center;
+    font-family: system-ui, sans-serif;
+    font-size: 11px;
+    color: #999;
+  }
+
+  /* ── LEITURA ── */
+  .reading-text {
+    font-size: 15px;
+    line-height: 1.7;
+    text-align: justify;
+    hyphens: auto;
+  }
+  .reading-text p { margin-bottom: 8px; text-indent: 1.5em; }
+  .reading-text p:first-child { text-indent: 0; }
+
+  .page-num {
+    position: absolute;
+    bottom: 16px;
+    left: 0; right: 0;
+    text-align: center;
+    font-family: system-ui, sans-serif;
+    font-size: 11px;
+    color: #999;
+  }
+
+  /* ── CONFIG ── */
+  .config-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid #e8e2d4;
+    transition: background 0.1s;
+  }
+  .config-item.active { background: #dad4c8; }
+  .config-item .label { font-size: 14px; }
+  .config-item .value {
+    font-family: system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #555;
+    background: #e8e2d4;
+    padding: 2px 12px;
+    border-radius: 10px;
+  }
+  .config-item.editing .value {
+    background: #2c2c2c;
+    color: #fff;
+  }
+
+  .config-hint {
+    position: absolute;
+    bottom: 16px;
+    left: 0; right: 0;
+    text-align: center;
+    font-family: system-ui, sans-serif;
+    font-size: 11px;
+    color: #999;
+  }
+
+  /* ── DEEP SLEEP ── */
+  .sleep-overlay {
+    position: absolute;
+    inset: 0;
+    background: #f5f0e8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.5s;
+    z-index: 10;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .sleep-overlay .icon { font-size: 48px; margin-bottom: 16px; }
+  .sleep-overlay .msg { font-size: 16px; color: #666; font-family: system-ui, sans-serif; }
+  .sleep-overlay .sub {
+    font-size: 12px; color: #999; margin-top: 8px;
+    font-family: system-ui, sans-serif;
+  }
+
+  /* ── E-INK FLASH ── */
+  @keyframes einkFlash {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; background: #fff; }
+    100% { opacity: 1; }
+  }
+  .eink-flash {
+    animation: einkFlash 0.12s ease-in-out;
+  }
+</style>
+</head>
+<body>
+
+<div class="ereader">
+  <!-- TELA -->
+  <div class="screen" id="screen"></div>
+
+  <!-- BOTÕES -->
+  <div class="btn-row">
+    <div class="btn-group">
+      <button class="btn" id="btnUp" aria-label="Anterior / Cima">▲</button>
+      <span class="btn-label">▲ Anterior</span>
+    </div>
+    <div class="btn-group">
+      <button class="btn" id="btnDown" aria-label="Próximo / Baixo">▼</button>
+      <span class="btn-label">▼ Próximo</span>
+    </div>
+    <div class="btn-group">
+      <button class="btn" id="btnSel" aria-label="Selecionar">●</button>
+      <span class="btn-label">● Selecionar</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  E-READER NEON — Simulador Web
+//  Baseado no firmware C++ em /src/
+// ═══════════════════════════════════════════════════════════════
+
+// ─── ESTADOS ────────────────────────────────────────────────
+const ESTADOS = { MENU_LIVROS: 0, LENDO: 1, CONFIG: 2, DORMINDO: 3 };
+let estado = ESTADOS.MENU_LIVROS;
+
+// ─── LIVROS ─────────────────────────────────────────────────
+const LIVROS = [
+  { titulo: "Dom Quixote", autor: "Miguel de Cervantes" },
+  { titulo: "Memórias Póstumas de Brás Cubas", autor: "Machado de Assis" },
+  { titulo: "1984", autor: "George Orwell" },
+  { titulo: "O Pequeno Príncipe", autor: "Antoine de Saint-Exupéry" },
+  { titulo: "Neuromancer", autor: "William Gibson" },
+];
+const NUM_LIVROS = LIVROS.length;
+let livroAtual = 0;
+let paginaAtual = 1;
+const TOTAL_PAGINAS = 24;
+
+// ─── CONFIG ─────────────────────────────────────────────────
+const configLabels = ["Margem (px)", "Espaçamento (px)", "Tempo tela (min)", "Tamanho fonte", "Intensidade LEDs (%)"];
+const configMin   = [ 0,  0, 1,  0,  0];
+const configMax   = [50, 20, 30, 24, 100];
+const configStep  = [ 1,  1, 1,  4,   5];
+let config        = { margem: 10, espacamento: 4, tempo_tela: 5, fonte: 22, leds: 50 };
+const CONFIG_ITEMS = ["margem", "espacamento", "tempo_tela", "fonte", "leds"];
+let configItem = 0;
+let editMode = false;
+
+// ─── TIMER DE INATIVIDADE ──────────────────────────────────
+const IDLE_SLEEP_MS = 30000; // 30s
+let lastActivity = Date.now();
+let sleepTimer = null;
+
+// ─── TEXTO MOCKADO ─────────────────────────────────────────
+const TEXTOS = [
+  "No lugar da Mancha, de cujo nome não quero lembrar-me, vivia não há muito tempo um fidalgo dos de lança em cabide, adarga antiga, rocim magro e cão de caça. Uma sopa mais de vaca que de carneiro, picadinho quase todas as noites, duelos e quebrantos aos sábados, lentilhas às sextas, e algum pombinho extra aos domingos, consumiam três quartas partes da sua fazenda.",
+  "O resto dela concluíam saio de veludo, calças de veludo da mesma cor, com seus pés de chumbo — que não eram de chumbo, mas de qualquer outro metal — e borzeguins do mesmo. A idade do nosso fidalgo beirava os cinquenta anos. Era de compleição robusta, seco de carnes, enxuto de rosto, grande madrugador e amigo da caça.",
+  "Quiseram alguns que o apelido fosse Quijada ou Quesada, que nisto há alguma diferença entre os autores que deste caso escrevem; ainda que por conjeturas verossímeis se deixa entender que se chamava Quijana. Mas isso importa pouco para a nossa história: basta que na narração dela não se saia um ponto da verdade.",
+  "É, pois, de saber que este sobredito fidalgo, nos intervalos de ócio — que eram os maiores do ano —, se dava a ler livros de cavalarias, com tamanha afeição e gosto, que esqueceu quase de todo o exercício da caça e até a administração de sua fazenda. E chegou a tal extremo o seu curioso desvario, que vendeu muitos alqueires de terra de semeadura para comprar livros de cavalarias para ler.",
+  "Assim, com estes pensamentos e discursos, veio a perder o pobre fidalgo o juízo, desvelando-se por entender aquelas razões e dar-lhes sentido, que não lho tirara nem lho poderia tirar o próprio Aristóteles, se ressuscitara só para isso. Tinha dúvidas sobre as feridas que D. Belianis dava e recebia, porque lhe parecia que por mais hábeis cirurgiões que o curassem, não podia deixar de ter o rosto e todo o corpo cheio de cicatrizes e sinais.",
+];
+
+// ─── RENDERIZAÇÃO ──────────────────────────────────────────
+const screen = document.getElementById('screen');
+
+function einkFlash() {
+  screen.classList.remove('eink-flash');
+  void screen.offsetWidth;
+  screen.classList.add('eink-flash');
+}
+
+function renderizar() {
+  einkFlash();
+
+  switch (estado) {
+    case ESTADOS.MENU_LIVROS:
+      renderMenu();
+      break;
+    case ESTADOS.LENDO:
+      renderLendo();
+      break;
+    case ESTADOS.CONFIG:
+      renderConfig();
+      break;
+    case ESTADOS.DORMINDO:
+      renderDormindo();
+      break;
+  }
+}
+
+function renderMenu() {
+  let html = `
+    <div class="screen-header">
+      <span class="title">📖 BIBLIOTECA</span>
+      <span class="status">${LIVROS.length} livros</span>
+    </div>
+    <div class="screen-content">
+      <ul class="book-list">`;
+
+  for (let i = 0; i < NUM_LIVROS; i++) {
+    const active = i === livroAtual ? 'active' : '';
+    html += `
+      <li class="book-item ${active}">
+        <span class="icon">📘</span>
+        <span>${LIVROS[i].titulo}</span>
+        <span class="arrow">▶</span>
+      </li>`;
+  }
+
+  html += `</ul></div>
+    <div class="menu-hint">▲/▼ navegar &nbsp;● abrir &nbsp;● (1s) Config</div>`;
+
+  screen.innerHTML = html;
+}
+
+function renderLendo() {
+  const textoIdx = (paginaAtual - 1) % TEXTOS.length;
+  const texto = TEXTOS[textoIdx];
+  const configFont = config.fonte;
+
+  let html = `
+    <div class="screen-header">
+      <span class="title">📄 ${LIVROS[livroAtual].titulo.substring(0, 22)}</span>
+      <span class="status">${paginaAtual}/${TOTAL_PAGINAS}</span>
+    </div>
+    <div class="screen-content">
+      <div class="reading-text" style="font-size:${configFont <= 14 ? 13 : configFont <= 18 ? 15 : 18}px; line-height:${1.5 + config.espacamento * 0.04}; padding:0 ${config.margem * 0.5}px">
+        <p>${texto}</p>
+        <p style="text-indent:1.5em; margin-top:6px">Continuou, pois, o nosso fidalgo nas suas leituras, enfrascando-se tanto nelas, que passava as noites a ler desde o sol posto até o amanhecer, e os dias desde o amanhecer até o sol posto. E assim, do pouco dormir e do muito ler, se lhe secou o cérebro, de maneira que veio a perder o juízo.</p>
+      </div>
+    </div>
+    <div class="page-num">▲ ▼ virar página &nbsp;● menu &nbsp;● (1s) Config</div>`;
+
+  screen.innerHTML = html;
+}
+
+function renderConfig() {
+  let html = `
+    <div class="screen-header">
+      <span class="title">⚙️ CONFIGURAÇÕES</span>
+      <span class="status">${editMode ? '✏️ Editando' : ''}</span>
+    </div>
+    <div class="screen-content">`;
+
+  for (let i = 0; i < CONFIG_ITEMS.length; i++) {
+    const key = CONFIG_ITEMS[i];
+    const active = i === configItem ? 'active' : '';
+    const editing = editMode && active ? 'editing' : '';
+    let displayVal = config[key];
+    if (key === 'leds') displayVal = displayVal + '%';
+    else if (key === 'fonte') {
+      if (config.fonte === 14) displayVal = 'Pequena (14)';
+      else if (config.fonte === 18) displayVal = 'Média (18)';
+      else if (config.fonte === 22) displayVal = 'Grande (22)';
+      else if (config.fonte === 24) displayVal = 'Extra (24)';
+    }
+
+    html += `
+      <div class="config-item ${active} ${editing}">
+        <span class="label">${i === configItem && editMode ? '✏️ ' : ''}${configLabels[i]}</span>
+        <span class="value">${displayVal}</span>
+      </div>`;
+  }
+
+  html += `</div>`;
+
+  if (editMode) {
+    html += `<div class="config-hint">▲/▼ ajustar &nbsp;● confirmar &nbsp;● (1s) sair sem salvar</div>`;
+  } else {
+    html += `<div class="config-hint">▲/▼ navegar &nbsp;● editar &nbsp;● (1s) voltar</div>`;
+  }
+
+  screen.innerHTML = html;
+}
+
+function renderDormindo() {
+  screen.innerHTML = `
+    <div class="sleep-overlay">
+      <div class="icon">💤</div>
+      <div class="msg">Deep Sleep</div>
+      <div class="sub">Pressione ● para acordar</div>
+    </div>`;
+}
+
+// ─── HANDLERS ──────────────────────────────────────────────
+
+function handleMenu(dirBotoes) {
+  const { cima, baixo, sel, selLong } = dirBotoes;
+
+  if (cima) {
+    livroAtual = (livroAtual - 1 + NUM_LIVROS) % NUM_LIVROS;
+    atualizarTimer();
+    return true;
+  }
+  if (baixo) {
+    livroAtual = (livroAtual + 1) % NUM_LIVROS;
+    atualizarTimer();
+    return true;
+  }
+  if (sel) {
+    paginaAtual = 1;
+    estado = ESTADOS.LENDO;
+    atualizarTimer();
+    return true;
+  }
+  if (selLong) {
+    editMode = false;
+    configItem = 0;
+    estado = ESTADOS.CONFIG;
+    atualizarTimer();
+    return true;
+  }
+  return false;
+}
+
+function handleLendo(dirBotoes) {
+  const { cima, baixo, sel, selLong } = dirBotoes;
+
+  if (cima && paginaAtual > 1) {
+    paginaAtual--;
+    atualizarTimer();
+    return true;
+  }
+  if (baixo && paginaAtual < TOTAL_PAGINAS) {
+    paginaAtual++;
+    atualizarTimer();
+    return true;
+  }
+  if (sel) {
+    estado = ESTADOS.MENU_LIVROS;
+    atualizarTimer();
+    return true;
+  }
+  if (selLong) {
+    editMode = false;
+    configItem = 0;
+    estado = ESTADOS.CONFIG;
+    atualizarTimer();
+    return true;
+  }
+  return false;
+}
+
+function handleConfig(dirBotoes) {
+  const { cima, baixo, sel, selLong } = dirBotoes;
+
+  if (editMode) {
+    if (cima) {
+      const key = CONFIG_ITEMS[configItem];
+      const step = configStep[configItem];
+      config[key] = Math.min(config[key] + step, configMax[configItem]);
+      // Fonte: 14→18→22→24 (cíclico via step)
+      if (key === 'fonte') {
+        const fontes = [14, 18, 22, 24];
+        const idx = fontes.indexOf(config.fonte);
+        config.fonte = fontes[(idx + 1) % fontes.length];
+      }
+      atualizarTimer();
+      return true;
+    }
+    if (baixo) {
+      const key = CONFIG_ITEMS[configItem];
+      if (key === 'fonte') {
+        const fontes = [14, 18, 22, 24];
+        const idx = fontes.indexOf(config.fonte);
+        config.fonte = fontes[(idx - 1 + fontes.length) % fontes.length];
+      } else {
+        config[key] = Math.max(config[key] - configStep[configItem], configMin[configItem]);
+      }
+      atualizarTimer();
+      return true;
+    }
+    if (sel) {
+      editMode = false;
+      atualizarTimer();
+      return true;
+    }
+    if (selLong) {
+      editMode = false;
+      estado = paginaAtual > 0 ? ESTADOS.MENU_LIVROS : ESTADOS.MENU_LIVROS;
+      atualizarTimer();
+      return true;
+    }
+  } else {
+    if (cima) {
+      configItem = (configItem - 1 + CONFIG_ITEMS.length) % CONFIG_ITEMS.length;
+      atualizarTimer();
+      return true;
+    }
+    if (baixo) {
+      configItem = (configItem + 1) % CONFIG_ITEMS.length;
+      atualizarTimer();
+      return true;
+    }
+    if (sel) {
+      editMode = true;
+      atualizarTimer();
+      return true;
+    }
+    if (selLong) {
+      editMode = false;
+      estado = paginaAtual > 0 ? ESTADOS.MENU_LIVROS : ESTADOS.MENU_LIVROS;
+      atualizarTimer();
+      return true;
+    }
+  }
+  return false;
+}
+
+// ─── CICLO PRINCIPAL ──────────────────────────────────────
+function processarInput(dirBotoes) {
+  if (estado === ESTADOS.DORMINDO) {
+    // Acorda
+    estado = ESTADOS.MENU_LIVROS;
+    atualizarTimer();
+    renderizar();
+    return;
+  }
+
+  let mudou = false;
+  switch (estado) {
+    case ESTADOS.MENU_LIVROS: mudou = handleMenu(dirBotoes); break;
+    case ESTADOS.LENDO:       mudou = handleLendo(dirBotoes); break;
+    case ESTADOS.CONFIG:      mudou = handleConfig(dirBotoes); break;
+  }
+
+  if (mudou) renderizar();
+}
+
+// ─── TIMER DE INATIVIDADE ─────────────────────────────────
+function atualizarTimer() {
+  lastActivity = Date.now();
+  clearTimeout(sleepTimer);
+  sleepTimer = setTimeout(entrarDeepSleep, IDLE_SLEEP_MS);
+}
+
+function entrarDeepSleep() {
+  if (estado === ESTADOS.DORMINDO) return;
+  estado = ESTADOS.DORMINDO;
+  renderizar();
+}
+
+// ─── BOTÕES (com long-press) ──────────────────────────────
+function setupBotoes() {
+  function setupBtn(id, callback) {
+    const el = document.getElementById(id);
+    let pressTimer = null;
+    let isLong = false;
+
+    function down(e) {
+      e.preventDefault();
+      el.classList.add('pressed');
+      isLong = false;
+      pressTimer = setTimeout(() => {
+        isLong = true;
+        el.classList.add('btn-long');
+      }, 1000);
+    }
+
+    function up(e) {
+      el.classList.remove('pressed', 'btn-long');
+      clearTimeout(pressTimer);
+      callback(isLong);
+    }
+
+    el.addEventListener('mousedown', down);
+    el.addEventListener('mouseup', up);
+    el.addEventListener('mouseleave', () => {
+      el.classList.remove('pressed', 'btn-long');
+      clearTimeout(pressTimer);
+    });
+
+    el.addEventListener('touchstart', (e) => { e.preventDefault(); down(e); });
+    el.addEventListener('touchend', up);
+    el.addEventListener('touchcancel', () => {
+      el.classList.remove('pressed', 'btn-long');
+      clearTimeout(pressTimer);
+    });
+  }
+
+  setupBtn('btnUp', (long) => {
+    if (estado === ESTADOS.CONFIG && editMode && !long) {
+      // No edit mode, ▲ adjusts value up
+    }
+    processarInput({ cima: !long, baixo: false, sel: false, selLong: false });
+  });
+
+  setupBtn('btnDown', (long) => {
+    processarInput({ cima: false, baixo: !long, sel: false, selLong: false });
+  });
+
+  setupBtn('btnSel', (long) => {
+    processarInput({ cima: false, baixo: false, sel: !long, selLong: long });
+  });
+
+  // Teclado
+  document.addEventListener('keydown', (e) => {
+    switch (e.key) {
+      case 'ArrowUp':
+      case 'w': processarInput({ cima: true, baixo: false, sel: false, selLong: false }); e.preventDefault(); break;
+      case 'ArrowDown':
+      case 's': processarInput({ cima: false, baixo: true, sel: false, selLong: false }); e.preventDefault(); break;
+      case 'Enter':
+      case ' ':
+        processarInput({ cima: false, baixo: false, sel: true, selLong: false }); e.preventDefault(); break;
+      case 'c':
+      case 'C':
+        processarInput({ cima: false, baixo: false, sel: false, selLong: true }); e.preventDefault(); break;
+    }
+  });
+}
+
+// ─── INICIALIZAÇÃO ────────────────────────────────────────
+renderizar();
+setupBotoes();
+atualizarTimer();
+</script>
+
+</body>
+</html>
