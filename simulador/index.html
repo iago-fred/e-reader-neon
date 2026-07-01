@@ -3,50 +3,50 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📖 E-Reader Neon — Simulador E-Paper</title>
+<title>📖 E-Reader Neon</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   body{
     background:#1e1e22;display:flex;justify-content:center;align-items:center;
-    min-height:100vh;font-family:system-ui,sans-serif;flex-direction:column;gap:16px;
+    min-height:100vh;font-family:system-ui,sans-serif;flex-direction:column;gap:10px;
   }
   .controls{
-    display:flex;gap:12px;align-items:center;flex-wrap:wrap;
-    background:#2a2a2e;padding:12px 20px;border-radius:12px;
+    display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+    background:#2a2a2e;padding:10px 16px;border-radius:10px;
   }
-  .controls label{color:#aaa;font-size:12px;display:flex;align-items:center;gap:6px;}
+  .controls label{color:#aaa;font-size:11px;display:flex;align-items:center;gap:4px;}
   .controls select,.controls button{
-    background:#444;color:#eee;border:1px solid #555;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;
+    background:#444;color:#eee;border:1px solid #555;border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;
   }
   .controls button{background:#505055;}
   .controls button:hover{background:#606068;}
-  .btn-row{display:flex;gap:20px;align-items:center;padding:8px 0;}
+  .btn-row{display:flex;gap:16px;align-items:center;padding:4px 0;}
   .btn{
-    width:50px;height:50px;border-radius:50%;border:none;background:#505055;
-    color:#ddd;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    width:44px;height:44px;border-radius:50%;border:none;background:#505055;
+    color:#ddd;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;
     transition:all .06s;box-shadow:0 3px 0 #333;user-select:none;-webkit-tap-highlight-color:transparent;font-weight:700;
   }
   .btn:active,.btn.pressed{transform:translateY(3px);box-shadow:0 1px 0 #333;}
   .btn:hover{background:#5a5a60;}
-  .btn-label{font-size:10px;color:#777;text-align:center;}
+  .btn-label{font-size:9px;color:#777;text-align:center;}
   .btn-group{display:flex;flex-direction:column;align-items:center;gap:2px;}
-  .panel-info{color:#666;font-size:11px;font-family:monospace;}
-  #canvas-wrap{border-radius:4px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.6);}
+  .panel-info{color:#666;font-size:10px;font-family:monospace;}
+  #canvas-wrap{border-radius:3px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.6);}
 </style>
 </head>
 <body>
 
-<div id="canvas-wrap"><canvas id="display" width="800" height="480"></canvas></div>
+<div id="canvas-wrap"><canvas id="display" width="480" height="800"></canvas></div>
 
 <div class="controls">
-  <label>Profundidade:
+  <label>Bits:
     <select id="bitDepth">
-      <option value="1">1-bit (preto/branco)</option>
-      <option value="2" selected>2-bit (4 tons)</option>
-      <option value="4">4-bit (16 tons)</option>
+      <option value="1">1-bit</option>
+      <option value="2" selected>2-bit</option>
+      <option value="4">4-bit</option>
     </select>
   </label>
-  <label>Ghosting:
+  <label>Ghost:
     <select id="ghostLevel">
       <option value="0">0%</option>
       <option value="5">5%</option>
@@ -55,49 +55,29 @@
     </select>
   </label>
   <label>Gênero:
-    <select id="genreFilter">
-      <option value="">Todos</option>
-    </select>
+    <select id="genreFilter"><option value="">Todos</option></select>
   </label>
-  <button id="btnRefresh" title="Forçar refresh global">⟳ Refresh</button>
-  <span class="panel-info" id="infoPanel">800×480 · 2-bit · Aguardando...</span>
+  <button id="btnRefresh">⟳</button>
+  <span class="panel-info" id="infoPanel">480×800</span>
 </div>
 
 <div class="btn-row">
-  <div class="btn-group">
-    <button class="btn" id="btnUp">▲</button>
-    <span class="btn-label">▲ Anterior</span>
-  </div>
-  <div class="btn-group">
-    <button class="btn" id="btnDown">▼</button>
-    <span class="btn-label">▼ Próximo</span>
-  </div>
-  <div class="btn-group">
-    <button class="btn" id="btnSel">●</button>
-    <span class="btn-label">● Sel</span>
-  </div>
+  <div class="btn-group"><button class="btn" id="btnUp">▲</button><span class="btn-label">Anterior</span></div>
+  <div class="btn-group"><button class="btn" id="btnDown">▼</button><span class="btn-label">Próximo</span></div>
+  <div class="btn-group"><button class="btn" id="btnSel">●</button><span class="btn-label">Sel</span></div>
 </div>
 
 <script>
 // ───────────────────────────────────────────────────────────────
-// E-READER NEON — Simulador com Canvas E-Paper
-// ───────────────────────────────────────────────────────────────
-
-// ── CANVAS SETUP ────────────────────────────────────────────
-const W = 800, H = 480;
+const W = 480, H = 800;
 const canvas = document.getElementById('display');
 const ctx = canvas.getContext('2d');
 canvas.width = W; canvas.height = H;
 
-// Pixel buffers: value 0 (black) to 255 (white)
-const pixelBuffer = new Uint8Array(W * H);     // current rendered content
-const ghostBuffer = new Uint8Array(W * H);     // previous frame (for ghosting)
-const displayBuffer = new Uint8Array(W * H);   // after dithering (to show)
+const pixelBuffer = new Uint8Array(W * H);
+const ghostBuffer = new Uint8Array(W * H);
+const displayBuffer = new Uint8Array(W * H);
 
-// For ghosting: blend factor
-const GHOST_MAX = 0.15;
-
-// ── E-INK EFFECTS ──────────────────────────────────────────
 let refreshing = false;
 const bitDepthEl = document.getElementById('bitDepth');
 const ghostLevelEl = document.getElementById('ghostLevel');
@@ -107,535 +87,352 @@ const infoPanel = document.getElementById('infoPanel');
 function getBitDepth() { return parseInt(bitDepthEl.value); }
 function getGhostFactor() { return parseInt(ghostLevelEl.value) / 100; }
 
-function clearBuffer(buf, val = 255) { buf.fill(val); }
+function fillBuf(buf, v) { buf.fill(v); }
+function copyBuf(s, d) { d.set(s); }
 
-function copyBuffer(src, dst) { dst.set(src); }
-
-// Floyd-Steinberg dithering
 function floydSteinberg(src, dst, w, h, levels) {
   const err = new Float32Array(w * h);
   for (let i = 0; i < w * h; i++) err[i] = src[i];
-
-  for (let y = 0; y < h; y++) {
+  for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
-      const idx = y * w + x;
-      const oldP = err[idx];
-      const newP = Math.round(oldP / 255 * (levels - 1)) * (255 / (levels - 1));
-      const quantErr = oldP - newP;
-      dst[idx] = Math.max(0, Math.min(255, Math.round(newP)));
-
-      if (x + 1 < w) err[idx + 1] += quantErr * 7 / 16;
+      const i = y * w + x;
+      const o = err[i], n = Math.round(o / 255 * (levels - 1)) * (255 / (levels - 1));
+      const q = o - n;
+      dst[i] = Math.max(0, Math.min(255, Math.round(n)));
+      if (x + 1 < w) err[i + 1] += q * 7 / 16;
       if (y + 1 < h) {
-        if (x > 0) err[idx + w - 1] += quantErr * 3 / 16;
-        err[idx + w] += quantErr * 5 / 16;
-        if (x + 1 < w) err[idx + w + 1] += quantErr * 1 / 16;
+        if (x > 0) err[i + w - 1] += q * 3 / 16;
+        err[i + w] += q * 5 / 16;
+        if (x + 1 < w) err[i + w + 1] += q * 1 / 16;
       }
     }
-  }
 }
 
-// Threshold dither (1-bit simple)
 function thresholdDither(src, dst, w, h, levels) {
-  const step = 255 / (levels - 1);
-  for (let i = 0; i < w * h; i++) {
-    dst[i] = Math.round(src[i] / step) * step;
-  }
+  const s = 255 / (levels - 1);
+  for (let i = 0; i < w * h; i++) dst[i] = Math.round(src[i] / s) * s;
 }
 
-function applyDither(src, dst, w, h, bitDepth) {
-  const levels = 1 << bitDepth;
-  if (bitDepth <= 2) {
-    floydSteinberg(src, dst, w, h, levels);
-  } else {
-    thresholdDither(src, dst, w, h, levels);
-  }
+function applyDither(src, dst, w, h, bd) {
+  const l = 1 << bd;
+  bd <= 2 ? floydSteinberg(src, dst, w, h, l) : thresholdDither(src, dst, w, h, l);
 }
 
-function applyGhosting(target, ghost, factor) {
-  if (factor <= 0) return;
-  for (let i = 0; i < W * H; i++) {
-    target[i] = Math.round(target[i] * (1 - factor) + ghost[i] * factor);
-  }
+function applyGhost(t, g, f) {
+  if (f <= 0) return;
+  for (let i = 0; i < W * H; i++) t[i] = Math.round(t[i] * (1 - f) + g[i] * f);
 }
 
-// ── REFRESH GLOBAL ─────────────────────────────────────────
-function doGlobalRefresh(callback) {
-  if (refreshing) { callback(); return; }
+function doGlobalRefresh(cb) {
+  if (refreshing) { cb(); return; }
   refreshing = true;
-
-  // Black flash
-  for (let i = 0; i < W * H; i++) pixelBuffer[i] = 0;
-  renderDisplayBuffer();
-  drawToScreen();
+  fillBuf(pixelBuffer, 0);
+  renderDisplayBuffer(); drawToScreen();
   setTimeout(() => {
-    // White flash
-    for (let i = 0; i < W * H; i++) pixelBuffer[i] = 255;
-    renderDisplayBuffer();
-    drawToScreen();
-    setTimeout(() => {
-      refreshing = false;
-      callback();
-    }, 80);
+    fillBuf(pixelBuffer, 255);
+    renderDisplayBuffer(); drawToScreen();
+    setTimeout(() => { refreshing = false; cb(); }, 80);
   }, 80);
 }
 
-// ── RENDER BUFFER TO CANVAS ────────────────────────────────
 function renderDisplayBuffer() {
-  const bitDepth = getBitDepth();
-  const ghostFactor = getGhostFactor();
-  const tempBuf = new Uint8Array(W * H);
-  tempBuf.set(pixelBuffer);
-
-  // Ghosting
-  applyGhosting(tempBuf, ghostBuffer, ghostFactor);
-
-  // Dithering
-  applyDither(tempBuf, displayBuffer, W, H, bitDepth);
-
-  // Save to ghost buffer for next frame
-  copyBuffer(pixelBuffer, ghostBuffer);
+  const t = new Uint8Array(W * H);
+  t.set(pixelBuffer);
+  applyGhost(t, ghostBuffer, getGhostFactor());
+  applyDither(t, displayBuffer, W, H, getBitDepth());
+  copyBuf(pixelBuffer, ghostBuffer);
 }
 
 function drawToScreen() {
-  const imageData = ctx.createImageData(W, H);
+  const id = ctx.createImageData(W, H);
   for (let i = 0; i < W * H; i++) {
-    const v = displayBuffer[i];
-    const idx = i * 4;
-    imageData.data[idx] = v;
-    imageData.data[idx + 1] = v;
-    imageData.data[idx + 2] = v;
-    imageData.data[idx + 3] = 255;
+    const v = displayBuffer[i], j = i * 4;
+    id.data[j] = v; id.data[j + 1] = v; id.data[j + 2] = v; id.data[j + 3] = 255;
   }
-  ctx.putImageData(imageData, 0, 0);
+  ctx.putImageData(id, 0, 0);
 }
 
-function updateInfo(msg) {
-  const bit = getBitDepth();
-  infoPanel.textContent = `${W}×${H} · ${bit}-bit · ${msg}`;
+function updateInfo(m) { infoPanel.textContent = `480×800 · ${getBitDepth()}-bit · ${m}`; }
+
+function drawRect(buf, x, y, w, h, g) {
+  for (let py = y; py < Math.min(y + h, H); py++)
+    for (let px = x; px < Math.min(x + w, W); px++)
+      buf[py * W + px] = g;
 }
 
-// ─── TEXT DRAWING (via canvas fillText) ─────────────────────
-function drawText(buf, x, y, text, size, color, font = 'Georgia') {
-  // Render text to a temp canvas, then downsample to pixel buffer
-  const scale = 2;
+function drawText(buf, x, y, text, size, color, font) {
+  const s = 3; // supersample
   const tc = document.createElement('canvas');
-  tc.width = W * scale; tc.height = H * scale;
+  tc.width = W * s; tc.height = H * s;
   const tctx = tc.getContext('2d');
   tctx.fillStyle = '#f5f0e8';
   tctx.fillRect(0, 0, tc.width, tc.height);
   tctx.fillStyle = `rgb(${color},${color},${color})`;
-  tctx.font = `${size * scale}px ${font}`;
+  tctx.font = `${size * s}px ${font || 'Georgia'}`;
   tctx.textBaseline = 'top';
   const lines = text.split('\n');
-  lines.forEach((line, i) => {
-    tctx.fillText(line, x * scale, (y + i * size * 1.3) * scale);
-  });
-
-  const imgData = tctx.getImageData(0, 0, W * scale, H * scale);
-  for (let py = 0; py < H; py++) {
+  lines.forEach((line, i) => { tctx.fillText(line, x * s, (y + i * size * 1.3) * s); });
+  const id = tctx.getImageData(0, 0, W * s, H * s);
+  for (let py = 0; py < H; py++)
     for (let px = 0; px < W; px++) {
-      const si = (py * scale * W * scale + px * scale) * 4;
-      const gray = Math.round(
-        imgData.data[si] * 0.299 + imgData.data[si + 1] * 0.587 + imgData.data[si + 2] * 0.114
-      );
+      const si = (py * s * W * s + px * s) * 4;
+      const g = Math.round(id.data[si] * 0.299 + id.data[si + 1] * 0.587 + id.data[si + 2] * 0.114);
       const di = py * W + px;
-      buf[di] = Math.min(buf[di], gray); // min = darker wins (text over background)
+      buf[di] = Math.min(buf[di], g);
     }
-  }
 }
 
-function fillBuf(buf, gray) { buf.fill(gray); }
-
-function drawRect(buf, x, y, w, h, gray) {
-  for (let py = y; py < Math.min(y + h, H); py++) {
-    for (let px = x; px < Math.min(x + w, W); px++) {
-      buf[py * W + px] = gray;
-    }
-  }
-}
-
-function drawChar(buf, x, y, char, size, gray, font = 'Georgia') {
-  drawText(buf, x, y, char, size, gray, font);
-}
-
-// ─── MOCK COVER GENERATOR ─────────────────────────────────
-function generateCover(buf, bookIdx, seed) {
-  const patterns = [
-    (b,i) => { // Stripes
-      for (let y = 0; y < 180; y++)
-        for (let x = 0; x < 120; x++)
-          b[y * 120 + x] = (Math.floor(y / 12) % 2 === 0) ? 40 : 180;
-    },
-    (b,i) => { // Circles
-      const cx = 60, cy = 90;
-      for (let y = 0; y < 180; y++)
-        for (let x = 0; x < 120; x++) {
-          const d = Math.hypot(x - cx, y - cy);
-          b[y * 120 + x] = d < 50 ? 30 : d < 70 ? 160 : 200;
-        }
-    },
-    (b,i) => { // Grid
-      for (let y = 0; y < 180; y++)
-        for (let x = 0; x < 120; x++)
-          b[y * 120 + x] = (x % 20 < 3 || y % 20 < 3) ? 60 : 190;
-    },
-    (b,i) => { // Gradient
-      for (let y = 0; y < 180; y++)
-        for (let x = 0; x < 120; x++)
-          b[y * 120 + x] = Math.round(180 - (x + y) * 0.5);
-    },
-    (b,i) => { // Diagonal
-      for (let y = 0; y < 180; y++)
-        for (let x = 0; x < 120; x++)
-          b[y * 120 + x] = ((x + y * 0.7) % 16 < 4) ? 50 : 185;
-    },
-  ];
-
-  const cvs = document.createElement('canvas');
-  cvs.width = 120; cvs.height = 180;
-  const c = cvs.getContext('2d');
-  c.fillStyle = '#f5f0e8'; c.fillRect(0, 0, 120, 180);
-
-  const pb = new Uint8Array(120 * 180);
+// ─── COVERS ────────────────────────────────────────────────
+function genCover(buf, idx) {
+  const cw = 80, ch = 130;
+  const pb = new Uint8Array(cw * ch);
   pb.fill(220);
 
-  if (patterns[bookIdx % patterns.length]) {
-    patterns[bookIdx % patterns.length](pb, bookIdx);
-  }
+  const p = [
+    (b) => { for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) b[y * cw + x] = Math.floor(y / 8) % 2 ? 40 : 180; },
+    (b) => { const cx = 40, cy = 65; for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) { const d = Math.hypot(x - cx, y - cy); b[y * cw + x] = d < 30 ? 30 : d < 50 ? 160 : 200; }},
+    (b) => { for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) b[y * cw + x] = (x % 14 < 2 || y % 14 < 2) ? 60 : 190; },
+    (b) => { for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) b[y * cw + x] = Math.round(180 - (x + y * 0.7) * 0.6); },
+    (b) => { for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) b[y * cw + x] = ((x + y * 0.7) % 12 < 3) ? 50 : 185; },
+  ];
+  (p[idx % p.length] || p[0])(pb);
 
-  // Borders
-  for (let y = 0; y < 180; y++) {
-    for (let x = 0; x < 120; x++) {
-      if (x < 2 || x >= 118 || y < 2 || y >= 178) pb[y * 120 + x] = 0;
-    }
-  }
+  // Border
+  for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) { if (x < 1 || x >= cw - 1 || y < 1 || y >= ch - 1) pb[y * cw + x] = 0; }
 
-  const im = c.createImageData(120, 180);
-  for (let i = 0; i < 120 * 180; i++) {
-    im.data[i * 4] = pb[i]; im.data[i * 4 + 1] = pb[i];
-    im.data[i * 4 + 2] = pb[i]; im.data[i * 4 + 3] = 255;
-  }
-  c.putImageData(im, 0, 0);
+  return pb;
+}
 
-  // Copy to pixel buffer at position
-  for (let y = 0; y < 180; y++)
-    for (let x = 0; x < 120; x++)
-      buf[(y + 50) * W + (x + 50)] = pb[y * 120 + x];
+function drawCover(buf, pb, dx, dy) {
+  const cw = 80, ch = 130;
+  for (let y = 0; y < ch && dy + y < H; y++)
+    for (let x = 0; x < cw && dx + x < W; x++)
+      buf[(dy + y) * W + (dx + x)] = pb[y * cw + x];
 }
 
 // ─── BOOKS ──────────────────────────────────────────────────
 const LIVROS = [
-  { titulo: 'Dom Quixote', autor: 'Miguel de Cervantes', genero: 'Romance', paginas: 42 },
-  { titulo: 'Memórias Póstumas de Brás Cubas', autor: 'Machado de Assis', genero: 'Romance', paginas: 38 },
-  { titulo: '1984', autor: 'George Orwell', genero: 'Ficção', paginas: 45 },
-  { titulo: 'O Pequeno Príncipe', autor: 'Saint-Exupéry', genero: 'Infantil', paginas: 28 },
-  { titulo: 'Neuromancer', autor: 'William Gibson', genero: 'Ficção Científica', paginas: 36 },
-  { titulo: 'A Metamorfose', autor: 'Franz Kafka', genero: 'Romance', paginas: 32 },
-  { titulo: 'Sherlock Holmes', autor: 'Arthur C. Doyle', genero: 'Mistério', paginas: 40 },
+  { t: 'Dom Quixote', a: 'Cervantes', g: 'Romance', p: 42 },
+  { t: 'Memórias Póstumas', a: 'Machado de Assis', g: 'Romance', p: 38 },
+  { t: '1984', a: 'George Orwell', g: 'Ficção', p: 45 },
+  { t: 'O Pequeno Príncipe', a: 'Saint-Exupéry', g: 'Infantil', p: 28 },
+  { t: 'Neuromancer', a: 'W. Gibson', g: 'Ficção Científica', p: 36 },
+  { t: 'A Metamorfose', a: 'Franz Kafka', g: 'Romance', p: 32 },
+  { t: 'Sherlock Holmes', a: 'A. C. Doyle', g: 'Mistério', p: 40 },
 ];
 let livroAtual = 0;
+const generos = [...new Set(LIVROS.map(l => l.g))];
+generos.forEach(g => { const o = document.createElement('option'); o.value = g; o.textContent = g; genreFilterEl.appendChild(o); });
 
-// Populate genre filter
-const generos = [...new Set(LIVROS.map(l => l.genero))];
-generos.forEach(g => {
-  const opt = document.createElement('option');
-  opt.value = g; opt.textContent = g;
-  genreFilterEl.appendChild(opt);
-});
-
-// ─── TEXTOS ────────────────────────────────────────────────
 const TEXTOS = [
   `No lugar da Mancha, de cujo nome não quero lembrar-me, vivia não há muito tempo um fidalgo dos de lança em cabide, adarga antiga, rocim magro e cão de caça. Uma sopa mais de vaca que de carneiro, picadinho quase todas as noites, duelos e quebrantos aos sábados, lentilhas às sextas, e algum pombinho extra aos domingos, consumiam três quartas partes da sua fazenda.`,
   `O resto dela concluíam saio de veludo, calças de veludo da mesma cor, com seus pés de chumbo — que não eram de chumbo, mas de qualquer outro metal — e borzeguins do mesmo. A idade do nosso fidalgo beirava os cinquenta anos. Era de compleição robusta, seco de carnes, enxuto de rosto, grande madrugador e amigo da caça.`,
   `Quiseram alguns que o apelido fosse Quijada ou Quesada, que nisto há alguma diferença entre os autores que deste caso escrevem; ainda que por conjeturas verossímeis se deixa entender que se chamava Quijana. Mas isso importa pouco para a nossa história: basta que na narração dela não se saia um ponto da verdade.`,
-  `É, pois, de saber que este sobredito fidalgo, nos intervalos de ócio — que eram os maiores do ano —, se dava a ler livros de cavalarias, com tamanha afeição e gosto, que esqueceu quase de todo o exercício da caça e até a administração de sua fazenda. E chegou a tal extremo o seu curioso desvario, que vendeu muitos alqueires de terra de semeadura para comprar livros de cavalarias para ler.`,
+  `É, pois, de saber que este sobredito fidalgo, nos intervalos de ócio — que eram os maiores do ano —, se dava a ler livros de cavalarias, com tamanha afeição e gosto, que esqueceu quase de todo o exercício da caça e até a administração de sua fazenda.`,
   `Assim, com estes pensamentos e discursos, veio a perder o pobre fidalgo o juízo, desvelando-se por entender aquelas razões e dar-lhes sentido, que não lho tirara nem lho poderia tirar o próprio Aristóteles, se ressuscitara só para isso.`,
 ];
-
-const TOTAL_PAGINAS = 24;
+const TOTAL_PAG = 24;
 let paginaAtual = 1;
 
-// ─── STATE ─────────────────────────────────────────────────
 const S = { MENU: 0, LENDO: 1, CONFIG: 2, DORMINDO: 3 };
 let estado = S.MENU;
-let paginaAtual = 1;
 
-// ─── CONFIG ────────────────────────────────────────────────
-const configLabels = ['Margem (px)', 'Espaçamento', 'Tempo tela (min)', 'Tamanho fonte', 'LEDs (%)'];
-const CONFIG_KEYS = ['margem', 'espacamento', 'tempo_tela', 'fonte', 'leds'];
-const configMin = [0, 0, 1, 0, 0];
-const configMax = [50, 20, 30, 24, 100];
-let config = { margem: 10, espacamento: 4, tempo_tela: 5, fonte: 22, leds: 50 };
-let configItem = 0;
-let editMode = false;
+const CKEYS = ['margem','espacamento','tempo_tela','fonte','leds'];
+const CLABEL = ['Margem (px)','Espaçamento','Tempo (min)','Fonte','LEDs (%)'];
+const CMIN = [0,0,1,0,0], CMAX = [50,20,30,24,100];
+let cfg = { margem:10, espacamento:4, tempo_tela:5, fonte:22, leds:50 };
+let cfgItem = 0, editMode = false;
 
-// ─── TIMER ─────────────────────────────────────────────────
 const IDLE_MS = 30000;
-let lastActivity = Date.now();
-let sleepTimer = null;
-
-function atualizarTimer() {
-  lastActivity = Date.now();
-  clearTimeout(sleepTimer);
-  sleepTimer = setTimeout(() => {
-    if (estado !== S.DORMINDO) { estado = S.DORMINDO; renderComRefresh(); updateInfo('Deep Sleep 💤'); }
-  }, IDLE_MS);
+let lastAct = Date.now(), sleepTimer = null;
+function atvTimer() {
+  lastAct = Date.now(); clearTimeout(sleepTimer);
+  sleepTimer = setTimeout(() => { if (estado !== S.DORMINDO) { estado = S.DORMINDO; renderRefresh(); } }, IDLE_MS);
 }
 
-// ─── RENDER ────────────────────────────────────────────────
-function renderComRefresh(callback) {
-  doGlobalRefresh(() => {
-    renderFrame();
-    if (callback) callback();
-  });
-}
+function renderRefresh(cb) { doGlobalRefresh(() => { renderFrame(); if (cb) cb(); }); }
 
 function renderFrame() {
-  fillBuf(pixelBuffer, 238); // off-white background
-
-  switch (estado) {
-    case S.MENU: renderMenuFrame(); break;
-    case S.LENDO: renderLendoFrame(); break;
-    case S.CONFIG: renderConfigFrame(); break;
-    case S.DORMINDO: renderDormindoFrame(); break;
-  }
-
-  renderDisplayBuffer();
-  drawToScreen();
-  updateInfo(estado === S.MENU ? 'Menu' : estado === S.LENDO ? `Lendo p.${paginaAtual}` : estado === S.CONFIG ? 'Config' : '💤');
+  fillBuf(pixelBuffer, 238);
+  if (estado === S.MENU) renderMenu();
+  else if (estado === S.LENDO) renderLendo();
+  else if (estado === S.CONFIG) renderConfig();
+  else renderDormindo();
+  renderDisplayBuffer(); drawToScreen();
+  updateInfo(estado === S.MENU ? 'Menu' : estado === S.LENDO ? `Pág ${paginaAtual}` : estado === S.CONFIG ? 'Config' : '💤');
 }
 
-function getFilteredBooks() {
-  const gen = genreFilterEl.value;
-  return gen ? LIVROS.filter(l => l.genero === gen) : LIVROS;
+function getFiltered() {
+  const g = genreFilterEl.value;
+  return g ? LIVROS.filter(l => l.g === g) : LIVROS;
 }
 
-function renderMenuFrame() {
-  const books = getFilteredBooks();
-  const activeIdx = books.indexOf(LIVROS[livroAtual]);
-  if (activeIdx < 0) { livroAtual = LIVROS.indexOf(books[0] || LIVROS[0]); }
+function renderMenu() {
+  const books = getFiltered();
+  if (books.length === 0) { drawText(pixelBuffer, 120, 350, 'Nenhum livro', 16, 120); return; }
+  let ai = books.indexOf(LIVROS[livroAtual]);
+  if (ai < 0) { livroAtual = LIVROS.indexOf(books[0]); ai = 0; }
 
-  // Title bar
-  drawRect(pixelBuffer, 0, 0, W, 36, 200);
-  drawText(pixelBuffer, 20, 8, '📖 BIBLIOTECA', 14, 40, 'system-ui');
-  drawText(pixelBuffer, W - 120, 10, `${books.length} livros`, 11, 100, 'system-ui');
+  drawRect(pixelBuffer, 0, 0, W, 32, 200);
+  drawText(pixelBuffer, 12, 6, '📖 BIBLIOTECA', 13, 40, 'system-ui');
+  drawText(pixelBuffer, W - 60, 8, `${books.length}`, 10, 100, 'system-ui');
 
-  // List books with covers
-  let yOff = 50;
+  let y = 44;
+  // Pre-generate covers
+  const coverCache = LIVROS.map((_, i) => genCover(null, i));
+
   books.forEach((livro, i) => {
-    const isActive = i === activeIdx;
-    const bg = isActive ? 205 : 230;
+    const ia = i === ai;
+    const bg = ia ? 205 : 228;
+    if (y + 140 > H) return;
 
-    // Cover thumbnail
-    const cBuf = new Uint8Array(120 * 180);
-    generateCover(cBuf, LIVROS.indexOf(livro), i);
-    for (let py = 0; py < 180 && yOff + py < H; py++)
-      for (let px = 0; px < 120; px++)
-        pixelBuffer[(yOff + py) * W + (px + 50)] = cBuf[py * 120 + px];
+    // Cover
+    const cpb = genCover(null, LIVROS.indexOf(livro));
+    drawCover(pixelBuffer, cpb, 12, y + 4);
 
-    // Book info
-    const tx = 190;
-    drawText(pixelBuffer, tx, yOff + 8, isActive ? `▶ ${livro.titulo}` : `  ${livro.titulo}`, 13, isActive ? 20 : 60, 'Georgia');
-    drawText(pixelBuffer, tx, yOff + 30, livro.autor, 10, 120, 'system-ui');
-    drawText(pixelBuffer, tx, yOff + 48, livro.genero, 9, 150, 'system-ui');
+    // Info
+    const tx = 100;
+    drawText(pixelBuffer, tx, y + 4, ia ? `▶ ${livro.t}` : `  ${livro.t}`, 12, ia ? 20 : 60);
+    drawText(pixelBuffer, tx, y + 24, livro.a, 9, 110, 'system-ui');
+    drawText(pixelBuffer, tx, y + 40, livro.g, 8, 140, 'system-ui');
 
-    if (isActive) {
-      // Selection border
-      for (let px = 46; px < 174; px++) {
-        if (yOff + 0 < H) pixelBuffer[(yOff + 0) * W + px] = 0;
-        if (yOff + 179 < H) pixelBuffer[(yOff + 179) * W + px] = 0;
-      }
+    // Selection indicator
+    if (ia) {
+      drawRect(pixelBuffer, 10, y + 2, 84, 132, 0);
     }
 
-    yOff += 100;
+    // Separator
+    drawRect(pixelBuffer, 100, y + 134, W - 110, 1, 210);
+
+    y += 144;
   });
 
-  if (books.length === 0) {
-    drawText(pixelBuffer, 200, 200, 'Nenhum livro neste gênero', 16, 120, 'Georgia');
-  }
-
-  drawText(pixelBuffer, 20, H - 24, '▲/▼ navegar  ● abrir  ● (1s) Config', 10, 140, 'system-ui');
+  drawText(pixelBuffer, 10, H - 20, '▲/▼ ● abrir  ●(1s) Config', 9, 140, 'system-ui');
 }
 
-function renderLendoFrame() {
+function renderLendo() {
   const livro = LIVROS[livroAtual];
 
-  // Header
-  drawRect(pixelBuffer, 0, 0, W, 34, 200);
-  drawText(pixelBuffer, 16, 8, `📄 ${livro.titulo.substring(0, 28)}`, 12, 40, 'system-ui');
-  drawText(pixelBuffer, W - 80, 9, `${paginaAtual}/${TOTAL_PAGINAS}`, 11, 100, 'system-ui');
+  drawRect(pixelBuffer, 0, 0, W, 32, 200);
+  drawText(pixelBuffer, 10, 6, `📄 ${livro.t.substring(0, 24)}`, 11, 40, 'system-ui');
+  drawText(pixelBuffer, W - 60, 7, `${paginaAtual}/${TOTAL_PAG}`, 10, 100, 'system-ui');
 
-  // Text area
-  const margin = config.margem + 16;
-  const linhaAlt = config.espacamento + 20;
-  const fontSize = config.fonte <= 14 ? 12 : config.fonte <= 18 ? 14 : config.fonte <= 22 ? 16 : 18;
+  const mg = cfg.margem + 10;
+  const lh = cfg.espacamento + 18;
+  const fs = cfg.fonte <= 14 ? 12 : cfg.fonte <= 18 ? 14 : cfg.fonte <= 22 ? 15 : 16;
 
-  const textoIdx = (paginaAtual - 1) % TEXTOS.length;
-  const texto = TEXTOS[textoIdx];
-  const text2 = 'Continuou, pois, o nosso fidalgo nas suas leituras, enfrascando-se tanto nelas, que passava as noites a ler desde o sol posto até o amanhecer, e os dias desde o amanhecer até o sol posto. E assim, do pouco dormir e do muito ler, se lhe secou o cérebro, de maneira que veio a perder o juízo.';
+  const ti = (paginaAtual - 1) % TEXTOS.length;
+  const t1 = TEXTOS[ti];
+  const t2 = `Continuou o nosso fidalgo nas suas leituras, passando as noites a ler do sol posto ao amanhecer. E assim, do pouco dormir e do muito ler, se lhe secou o cérebro, de maneira que veio a perder o juízo.`;
 
-  // Page content
-  drawText(pixelBuffer, margin, 50, texto, fontSize, 30, 'Georgia');
-  drawText(pixelBuffer, margin, 50 + linhaAlt * 9, text2, fontSize, 30, 'Georgia');
+  drawText(pixelBuffer, mg, 44, t1, fs, 30);
+  drawText(pixelBuffer, mg, 44 + lh * 9, t2, fs, 30);
 
-  drawText(pixelBuffer, 20, H - 22, '▲/▼ página  ● menu  ● (1s) Config', 10, 140, 'system-ui');
+  drawText(pixelBuffer, 10, H - 20, '▲/▼ página  ● menu  ●(1s) Config', 9, 140, 'system-ui');
 }
 
-function renderConfigFrame() {
-  drawRect(pixelBuffer, 0, 0, W, 34, 200);
-  drawText(pixelBuffer, 16, 8, editMode ? '✏️ CONFIG — Editando' : '⚙️ CONFIGURAÇÕES', 12, 40, 'system-ui');
+function renderConfig() {
+  drawRect(pixelBuffer, 0, 0, W, 32, 200);
+  drawText(pixelBuffer, 10, 6, editMode ? '✏️ EDITANDO' : '⚙️ CONFIG', 12, 40, 'system-ui');
 
-  let yOff = 56;
-  CONFIG_KEYS.forEach((key, i) => {
-    const isActive = i === configItem;
-    const isEditing = editMode && isActive;
-    const bg = isEditing ? 170 : isActive ? 195 : 225;
+  let y = 48;
+  CKEYS.forEach((k, i) => {
+    const ia = i === cfgItem, ie = editMode && ia;
+    drawRect(pixelBuffer, 14, y, W - 28, 32, ie ? 170 : ia ? 195 : 225);
 
-    drawRect(pixelBuffer, 16, yOff, W - 32, 34, bg);
+    let v = cfg[k];
+    if (k === 'leds') v = v + '%';
+    else if (k === 'fonte') v = ({14:'P',18:'M',22:'G',24:'X'})[v] || v;
 
-    let label = configLabels[i];
-    let val = config[key];
-    if (key === 'leds') val = val + '%';
-    else if (key === 'fonte') {
-      val = ({14:'Pequena',18:'Média',22:'Grande',24:'Extra'})[val] || val;
-    }
+    const p = ie ? '✏️ ' : ia ? '▶ ' : '  ';
+    drawText(pixelBuffer, 24, y + 6, `${p}${CLABEL[i]}`, 10, ia ? 10 : 80, 'system-ui');
+    drawText(pixelBuffer, W - 50, y + 6, String(v), 10, ie ? 0 : 100, 'system-ui');
 
-    const prefix = isEditing ? '✏️ ' : isActive ? '▶ ' : '  ';
-    drawText(pixelBuffer, 28, yOff + 8, `${prefix}${label}`, 11, isActive ? 10 : 80, 'system-ui');
-
-    const valStr = String(val);
-    drawText(pixelBuffer, W - 32 - valStr.length * 8, yOff + 8, valStr, 11, isActive ? 0 : 100, 'system-ui');
-
-    yOff += 40;
+    y += 38;
   });
 
-  if (editMode) {
-    drawText(pixelBuffer, 20, H - 22, '▲/▼ ajustar  ● confirmar  ● (1s) sair', 10, 140, 'system-ui');
-  } else {
-    drawText(pixelBuffer, 20, H - 22, '▲/▼ navegar  ● editar  ● (1s) voltar', 10, 140, 'system-ui');
-  }
+  drawText(pixelBuffer, 10, H - 20, editMode ? '▲/▼ ajustar  ● confirmar  ●(1s) sair' : '▲/▼ navegar  ● editar  ●(1s) voltar', 9, 140, 'system-ui');
 }
 
-function renderDormindoFrame() {
+function renderDormindo() {
   fillBuf(pixelBuffer, 230);
-  drawText(pixelBuffer, 280, 180, '💤', 48, 120, 'system-ui');
-  drawText(pixelBuffer, 260, 240, 'Deep Sleep', 20, 80, 'system-ui');
-  drawText(pixelBuffer, 230, 270, 'Pressione ● para acordar', 12, 130, 'system-ui');
+  drawText(pixelBuffer, 160, 300, '💤', 48, 120, 'system-ui');
+  drawText(pixelBuffer, 140, 360, 'Deep Sleep', 18, 80, 'system-ui');
+  drawText(pixelBuffer, 120, 390, 'Pressione ● para acordar', 11, 130, 'system-ui');
 }
 
 // ─── HANDLERS ──────────────────────────────────────────────
-function handleMenu(dir) {
-  const books = getFilteredBooks();
-  if (books.length === 0) return false;
-  const activeIdx = books.indexOf(LIVROS[livroAtual]);
-  let idx = activeIdx >= 0 ? activeIdx : 0;
-
-  if (dir.cima) { idx = (idx - 1 + books.length) % books.length; livroAtual = LIVROS.indexOf(books[idx]); atualizarTimer(); return true; }
-  if (dir.baixo) { idx = (idx + 1) % books.length; livroAtual = LIVROS.indexOf(books[idx]); atualizarTimer(); return true; }
-  if (dir.sel) { paginaAtual = 1; estado = S.LENDO; atualizarTimer(); return true; }
-  if (dir.selLong) { editMode = false; configItem = 0; estado = S.CONFIG; atualizarTimer(); return true; }
-  return false;
-}
-
-function handleLendo(dir) {
-  if (dir.cima && paginaAtual > 1) { paginaAtual--; atualizarTimer(); return true; }
-  if (dir.baixo && paginaAtual < TOTAL_PAGINAS) { paginaAtual++; atualizarTimer(); return true; }
-  if (dir.sel) { estado = S.MENU; atualizarTimer(); return true; }
-  if (dir.selLong) { editMode = false; configItem = 0; estado = S.CONFIG; atualizarTimer(); return true; }
-  return false;
-}
-
-function handleConfig(dir) {
-  if (editMode) {
-    if (dir.cima) {
-      if (CONFIG_KEYS[configItem] === 'fonte') {
-        const fontes = [14, 18, 22, 24]; const idx = fontes.indexOf(config.fonte);
-        config.fonte = fontes[(idx + 1) % fontes.length];
-      } else {
-        config[CONFIG_KEYS[configItem]] = Math.min(config[CONFIG_KEYS[configItem]] + 1, configMax[configItem]);
+function handle(d) {
+  if (estado === S.DORMINDO) { estado = S.MENU; atvTimer(); renderRefresh(); return; }
+  let m = false;
+  const books = getFiltered();
+  if (estado === S.MENU) {
+    const ai = books.indexOf(LIVROS[livroAtual]); let idx = ai >= 0 ? ai : 0;
+    if (d.c && books.length) { idx = (idx - 1 + books.length) % books.length; livroAtual = LIVROS.indexOf(books[idx]); m = true; }
+    if (d.v && books.length) { idx = (idx + 1) % books.length; livroAtual = LIVROS.indexOf(books[idx]); m = true; }
+    if (d.s) { if (books.length) { paginaAtual = 1; estado = S.LENDO; } m = true; }
+    if (d.l) { cfgItem = 0; editMode = false; estado = S.CONFIG; m = true; }
+  } else if (estado === S.LENDO) {
+    if (d.c && paginaAtual > 1) { paginaAtual--; m = true; }
+    if (d.v && paginaAtual < TOTAL_PAG) { paginaAtual++; m = true; }
+    if (d.s) { estado = S.MENU; m = true; }
+    if (d.l) { cfgItem = 0; editMode = false; estado = S.CONFIG; m = true; }
+  } else if (estado === S.CONFIG) {
+    if (editMode) {
+      if (d.c) {
+        if (CKEYS[cfgItem] === 'fonte') { const f = [14,18,22,24]; const fi = f.indexOf(cfg.fonte); cfg.fonte = f[(fi + 1) % f.length]; }
+        else cfg[CKEYS[cfgItem]] = Math.min(cfg[CKEYS[cfgItem]] + 1, CMAX[cfgItem]);
+        m = true;
       }
-      atualizarTimer(); return true;
-    }
-    if (dir.baixo) {
-      if (CONFIG_KEYS[configItem] === 'fonte') {
-        const fontes = [14, 18, 22, 24]; const idx = fontes.indexOf(config.fonte);
-        config.fonte = fontes[(idx - 1 + fontes.length) % fontes.length];
-      } else {
-        config[CONFIG_KEYS[configItem]] = Math.max(config[CONFIG_KEYS[configItem]] - 1, configMin[configItem]);
+      if (d.v) {
+        if (CKEYS[cfgItem] === 'fonte') { const f = [14,18,22,24]; const fi = f.indexOf(cfg.fonte); cfg.fonte = f[(fi - 1 + f.length) % f.length]; }
+        else cfg[CKEYS[cfgItem]] = Math.max(cfg[CKEYS[cfgItem]] - 1, CMIN[cfgItem]);
+        m = true;
       }
-      atualizarTimer(); return true;
+      if (d.s) { editMode = false; m = true; }
+      if (d.l) { editMode = false; estado = S.MENU; m = true; }
+    } else {
+      if (d.c) { cfgItem = (cfgItem - 1 + CKEYS.length) % CKEYS.length; m = true; }
+      if (d.v) { cfgItem = (cfgItem + 1) % CKEYS.length; m = true; }
+      if (d.s) { editMode = true; m = true; }
+      if (d.l) { editMode = false; estado = S.MENU; m = true; }
     }
-    if (dir.sel) { editMode = false; atualizarTimer(); return true; }
-    if (dir.selLong) { editMode = false; estado = S.MENU; atualizarTimer(); return true; }
-  } else {
-    if (dir.cima) { configItem = (configItem - 1 + CONFIG_KEYS.length) % CONFIG_KEYS.length; atualizarTimer(); return true; }
-    if (dir.baixo) { configItem = (configItem + 1) % CONFIG_KEYS.length; atualizarTimer(); return true; }
-    if (dir.sel) { editMode = true; atualizarTimer(); return true; }
-    if (dir.selLong) { editMode = false; estado = S.MENU; atualizarTimer(); return true; }
   }
-  return false;
-}
-
-function processarInput(dir) {
-  if (estado === S.DORMINDO) {
-    estado = S.MENU; atualizarTimer(); renderComRefresh(); return;
-  }
-
-  let mudou = false;
-  switch (estado) {
-    case S.MENU: mudou = handleMenu(dir); break;
-    case S.LENDO: mudou = handleLendo(dir); break;
-    case S.CONFIG: mudou = handleConfig(dir); break;
-  }
-
-  if (mudou) renderComRefresh();
+  if (m) { atvTimer(); renderRefresh(); }
 }
 
 // ─── BOTÕES ────────────────────────────────────────────────
-function setupBotoes() {
+function setup() {
   ['btnUp','btnDown','btnSel'].forEach((id, bi) => {
     const el = document.getElementById(id);
-    let pt, isLong = false;
-    function down(e) { e.preventDefault(); el.classList.add('pressed'); isLong = false; pt = setTimeout(() => { isLong = true; }, 1000); }
-    function up() { el.classList.remove('pressed'); clearTimeout(pt);
-      const cima = bi === 0, baixo = bi === 1, sel = bi === 2;
-      processarInput({ cima: cima && !isLong, baixo: baixo && !isLong, sel: sel && !isLong, selLong: sel && isLong });
-    }
-    el.addEventListener('mousedown', down);
-    el.addEventListener('mouseup', up);
+    let pt, il = false;
+    const dn = (e) => { e.preventDefault(); el.classList.add('pressed'); il = false; pt = setTimeout(() => { il = true; }, 1000); };
+    const up = () => { el.classList.remove('pressed'); clearTimeout(pt);
+      handle({c: bi===0&&!il, v: bi===1&&!il, s: bi===2&&!il, l: bi===2&&il}); };
+    el.addEventListener('mousedown', dn); el.addEventListener('mouseup', up);
     el.addEventListener('mouseleave', () => { el.classList.remove('pressed'); clearTimeout(pt); });
-    el.addEventListener('touchstart', down, {passive: false});
-    el.addEventListener('touchend', up);
+    el.addEventListener('touchstart', dn, {passive:false}); el.addEventListener('touchend', up);
   });
 
   document.addEventListener('keydown', e => {
     switch(e.key) {
-      case 'ArrowUp': case 'w': processarInput({cima:true,baixo:false,sel:false,selLong:false}); e.preventDefault(); break;
-      case 'ArrowDown': case 's': processarInput({cima:false,baixo:true,sel:false,selLong:false}); e.preventDefault(); break;
-      case 'Enter': case ' ': processarInput({cima:false,baixo:false,sel:true,selLong:false}); e.preventDefault(); break;
-      case 'c': case 'C': processarInput({cima:false,baixo:false,sel:false,selLong:true}); break;
+      case 'ArrowUp': case 'w': handle({c:1,v:0,s:0,l:0}); e.preventDefault(); break;
+      case 'ArrowDown': case 's': handle({c:0,v:1,s:0,l:0}); e.preventDefault(); break;
+      case 'Enter': case ' ': handle({c:0,v:0,s:1,l:0}); e.preventDefault(); break;
+      case 'c': case 'C': handle({c:0,v:0,s:0,l:1}); break;
     }
   });
 
-  document.getElementById('btnRefresh').addEventListener('click', () => {
-    if (!refreshing) renderComRefresh();
-  });
-
-  genreFilterEl.addEventListener('change', () => {
-    const books = getFilteredBooks();
-    if (books.length > 0) livroAtual = LIVROS.indexOf(books[0]);
-    renderComRefresh();
-  });
-
-  bitDepthEl.addEventListener('change', () => { renderFrame(); });
-  ghostLevelEl.addEventListener('change', () => { renderFrame(); });
+  document.getElementById('btnRefresh').onclick = () => { if (!refreshing) renderRefresh(); };
+  genreFilterEl.onchange = () => { const b = getFiltered(); if (b.length) livroAtual = LIVROS.indexOf(b[0]); renderRefresh(); };
+  bitDepthEl.onchange = () => renderFrame();
+  ghostLevelEl.onchange = () => renderFrame();
 }
 
-// ─── INIT ──────────────────────────────────────────────────
-clearBuffer(pixelBuffer, 238);
-setupBotoes();
-atualizarTimer();
-renderComRefresh();
+fillBuf(pixelBuffer, 238);
+setup();
+atvTimer();
+renderRefresh();
 </script>
 </body>
 </html>
