@@ -26,11 +26,11 @@ E-reader caseiro usando ESP32 + tela e-ink WeAct Studio 3.7", bateria KG40 Motor
 | SD Card Module | SPI | ~R$ 10 | Pendente |
 | LEDs + MOSFET | 4x branco 0603 + 2N7002 | ~R$ 10 | Pendente |
 | Resistores | 10k + 47R + 1k | ~R$ 3 | Pendente |
-| Capacitores | 10uF + 0.1uF | ~R$ 2 | Pendente |
+| Capacitores | 4x 0,47µF (a1p3) + 2x 68nF (zx683k) + 1x 22µF (CD11-G) | R$ 0 | ✅ OK |
 | Diodo 1N5819 | Proteção reversa | ~R$ 1 | Pendente |
 | Acrílico 3mm | ~30x20cm | ~R$ 15 | Pendente |
 | Filamento 3D | PLA/PETG | ~R$ 10 | Pendente |
-| **Total** | | **~R$ 140-220** | |
+| **Total** | | **~R$ 138-218** | |
 
 ---
 
@@ -332,13 +332,13 @@ Todas as fontes com sufixo `_tf` incluem Latin Extended A (á, à, â, ã, é, �
 | Módulo SD Card SPI | ~R$ 10 |
 | Botões (lote) | ~R$ 3 |
 
-### 🥉 Onda 3 — Depois (~R$ 30-40)
+### 🥉 Onda 3 — Depois (~R$ 23-33)
 
 | Item | Preço |
 |------|-------|
 | TP4056 | ~R$ 8 |
 | LDO XC6206P332 | ~R$ 5 |
-| Kit resistores + capacitores | ~R$ 10 |
+| Resistores (10k + 47R + 1k) | ~R$ 3 |
 | Diodo 1N5819 | ~R$ 1 |
 | LEDs + MOSFET 2N7002 | ~R$ 10 |
 | Acrílico | ~R$ 15 |

@@ -75,10 +75,17 @@ void handleLendo();
 /**
  * @brief Processa entrada do usuário no estado CONFIG
  *
- * ▲ = item anterior (cíclico entre 5 itens)
- * ▼ = próximo item (cíclico)
- * ● curto = incrementa o valor do item atual
- * ● longo = volta para o estado anterior (LENDO ou MENU_LIVROS)
+ * Modo navegação (editMode = false):
+ *   ▲ = item anterior (cíclico)
+ *   ▼ = próximo item (cíclico)
+ *   ● curto = entra em modo edição
+ *   ● longo = volta ao menu anterior
+ *
+ * Modo edição (editMode = true):
+ *   ▲ = incrementa valor do item
+ *   ▼ = decrementa valor do item
+ *   ● curto = confirma e volta ao modo navegação
+ *   ● longo = sai sem salvar e volta ao menu anterior
  */
 void handleConfig();
 
