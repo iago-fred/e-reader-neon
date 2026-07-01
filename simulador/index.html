@@ -3,655 +3,639 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📖 Simulador E-Reader Neon</title>
+<title>📖 E-Reader Neon — Simulador E-Paper</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-
-  body {
-    background: #2a2a2e;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    font-family: system-ui, -apple-system, sans-serif;
+  body{
+    background:#1e1e22;display:flex;justify-content:center;align-items:center;
+    min-height:100vh;font-family:system-ui,sans-serif;flex-direction:column;gap:16px;
   }
-
-  .ereader {
-    background: #38383d;
-    border-radius: 24px;
-    padding: 28px 24px;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    border: 1px solid #48484e;
+  .controls{
+    display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+    background:#2a2a2e;padding:12px 20px;border-radius:12px;
   }
-
-  /* ── TELA E-INK ── */
-  .screen {
-    width: 540px;
-    height: 720px;
-    background: #f5f0e8;
-    border-radius: 4px;
-    padding: 32px 36px;
-    position: relative;
-    font-family: Georgia, 'New Century Schoolbook', 'Century Schoolbook L', serif;
-    color: #2c2c2c;
-    font-size: 15px;
-    line-height: 1.6;
-    overflow: hidden;
-    box-shadow: inset 0 0 30px rgba(0,0,0,0.04);
-    transition: opacity 0.08s;
-    border: 1px solid #d8d2c4;
+  .controls label{color:#aaa;font-size:12px;display:flex;align-items:center;gap:6px;}
+  .controls select,.controls button{
+    background:#444;color:#eee;border:1px solid #555;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;
   }
-
-  .screen.refreshing { opacity: 0.75; }
-
-  .screen-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 12px;
-    margin-bottom: 16px;
-    border-bottom: 1px solid #d8d2c4;
-    font-family: system-ui, sans-serif;
+  .controls button{background:#505055;}
+  .controls button:hover{background:#606068;}
+  .btn-row{display:flex;gap:20px;align-items:center;padding:8px 0;}
+  .btn{
+    width:50px;height:50px;border-radius:50%;border:none;background:#505055;
+    color:#ddd;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    transition:all .06s;box-shadow:0 3px 0 #333;user-select:none;-webkit-tap-highlight-color:transparent;font-weight:700;
   }
-
-  .screen-header .title {
-    font-size: 13px;
-    font-weight: 600;
-    color: #555;
-    letter-spacing: 0.5px;
-  }
-
-  .screen-header .status {
-    font-size: 11px;
-    color: #888;
-  }
-
-  .screen-content { height: calc(100% - 60px); overflow: hidden; }
-
-  /* ── BOTÕES ── */
-  .btn-row {
-    display: flex;
-    gap: 32px;
-    margin-top: 24px;
-    align-items: center;
-  }
-
-  .btn {
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    border: none;
-    background: #505055;
-    color: #ddd;
-    font-size: 20px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.08s;
-    box-shadow: 0 3px 0 #333, 0 4px 8px rgba(0,0,0,0.3);
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-    font-weight: 700;
-  }
-  .btn:active, .btn.pressed { transform: translateY(3px); box-shadow: 0 1px 0 #333; }
-  .btn:hover { background: #5a5a60; }
-  .btn-long { background: #3a3a8a; box-shadow: 0 3px 0 #2a2a6a; }
-  .btn-label {
-    font-size: 11px;
-    color: #888;
-    text-align: center;
-    margin-top: 4px;
-  }
-
-  .btn-group { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-
-  /* ── MENU LIVROS ── */
-  .book-list { list-style: none; }
-  .book-item {
-    padding: 10px 14px;
-    margin-bottom: 4px;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 15px;
-    transition: background 0.1s;
-  }
-  .book-item.active {
-    background: #dad4c8;
-    font-weight: 600;
-  }
-  .book-item .icon { font-size: 18px; opacity: 0.7; }
-  .book-item.active .icon { opacity: 1; }
-  .book-item .arrow { visibility: hidden; margin-left: auto; color: #888; }
-  .book-item.active .arrow { visibility: visible; }
-
-  .menu-hint {
-    position: absolute;
-    bottom: 16px;
-    left: 0; right: 0;
-    text-align: center;
-    font-family: system-ui, sans-serif;
-    font-size: 11px;
-    color: #999;
-  }
-
-  /* ── LEITURA ── */
-  .reading-text {
-    font-size: 15px;
-    line-height: 1.7;
-    text-align: justify;
-    hyphens: auto;
-  }
-  .reading-text p { margin-bottom: 8px; text-indent: 1.5em; }
-  .reading-text p:first-child { text-indent: 0; }
-
-  .page-num {
-    position: absolute;
-    bottom: 16px;
-    left: 0; right: 0;
-    text-align: center;
-    font-family: system-ui, sans-serif;
-    font-size: 11px;
-    color: #999;
-  }
-
-  /* ── CONFIG ── */
-  .config-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 14px;
-    border-bottom: 1px solid #e8e2d4;
-    transition: background 0.1s;
-  }
-  .config-item.active { background: #dad4c8; }
-  .config-item .label { font-size: 14px; }
-  .config-item .value {
-    font-family: system-ui, sans-serif;
-    font-size: 14px;
-    font-weight: 600;
-    color: #555;
-    background: #e8e2d4;
-    padding: 2px 12px;
-    border-radius: 10px;
-  }
-  .config-item.editing .value {
-    background: #2c2c2c;
-    color: #fff;
-  }
-
-  .config-hint {
-    position: absolute;
-    bottom: 16px;
-    left: 0; right: 0;
-    text-align: center;
-    font-family: system-ui, sans-serif;
-    font-size: 11px;
-    color: #999;
-  }
-
-  /* ── DEEP SLEEP ── */
-  .sleep-overlay {
-    position: absolute;
-    inset: 0;
-    background: #f5f0e8;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    animation: fadeIn 0.5s;
-    z-index: 10;
-  }
-  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-  .sleep-overlay .icon { font-size: 48px; margin-bottom: 16px; }
-  .sleep-overlay .msg { font-size: 16px; color: #666; font-family: system-ui, sans-serif; }
-  .sleep-overlay .sub {
-    font-size: 12px; color: #999; margin-top: 8px;
-    font-family: system-ui, sans-serif;
-  }
-
-  /* ── E-INK FLASH ── */
-  @keyframes einkFlash {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; background: #fff; }
-    100% { opacity: 1; }
-  }
-  .eink-flash {
-    animation: einkFlash 0.12s ease-in-out;
-  }
+  .btn:active,.btn.pressed{transform:translateY(3px);box-shadow:0 1px 0 #333;}
+  .btn:hover{background:#5a5a60;}
+  .btn-label{font-size:10px;color:#777;text-align:center;}
+  .btn-group{display:flex;flex-direction:column;align-items:center;gap:2px;}
+  .panel-info{color:#666;font-size:11px;font-family:monospace;}
+  #canvas-wrap{border-radius:4px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.6);}
 </style>
 </head>
 <body>
 
-<div class="ereader">
-  <!-- TELA -->
-  <div class="screen" id="screen"></div>
+<div id="canvas-wrap"><canvas id="display" width="800" height="480"></canvas></div>
 
-  <!-- BOTÕES -->
-  <div class="btn-row">
-    <div class="btn-group">
-      <button class="btn" id="btnUp" aria-label="Anterior / Cima">▲</button>
-      <span class="btn-label">▲ Anterior</span>
-    </div>
-    <div class="btn-group">
-      <button class="btn" id="btnDown" aria-label="Próximo / Baixo">▼</button>
-      <span class="btn-label">▼ Próximo</span>
-    </div>
-    <div class="btn-group">
-      <button class="btn" id="btnSel" aria-label="Selecionar">●</button>
-      <span class="btn-label">● Selecionar</span>
-    </div>
+<div class="controls">
+  <label>Profundidade:
+    <select id="bitDepth">
+      <option value="1">1-bit (preto/branco)</option>
+      <option value="2" selected>2-bit (4 tons)</option>
+      <option value="4">4-bit (16 tons)</option>
+    </select>
+  </label>
+  <label>Ghosting:
+    <select id="ghostLevel">
+      <option value="0">0%</option>
+      <option value="5">5%</option>
+      <option value="10">10%</option>
+      <option value="15" selected>15%</option>
+    </select>
+  </label>
+  <label>Gênero:
+    <select id="genreFilter">
+      <option value="">Todos</option>
+    </select>
+  </label>
+  <button id="btnRefresh" title="Forçar refresh global">⟳ Refresh</button>
+  <span class="panel-info" id="infoPanel">800×480 · 2-bit · Aguardando...</span>
+</div>
+
+<div class="btn-row">
+  <div class="btn-group">
+    <button class="btn" id="btnUp">▲</button>
+    <span class="btn-label">▲ Anterior</span>
+  </div>
+  <div class="btn-group">
+    <button class="btn" id="btnDown">▼</button>
+    <span class="btn-label">▼ Próximo</span>
+  </div>
+  <div class="btn-group">
+    <button class="btn" id="btnSel">●</button>
+    <span class="btn-label">● Sel</span>
   </div>
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════
-//  E-READER NEON — Simulador Web
-//  Baseado no firmware C++ em /src/
-// ═══════════════════════════════════════════════════════════════
+// ───────────────────────────────────────────────────────────────
+// E-READER NEON — Simulador com Canvas E-Paper
+// ───────────────────────────────────────────────────────────────
 
-// ─── ESTADOS ────────────────────────────────────────────────
-const ESTADOS = { MENU_LIVROS: 0, LENDO: 1, CONFIG: 2, DORMINDO: 3 };
-let estado = ESTADOS.MENU_LIVROS;
+// ── CANVAS SETUP ────────────────────────────────────────────
+const W = 800, H = 480;
+const canvas = document.getElementById('display');
+const ctx = canvas.getContext('2d');
+canvas.width = W; canvas.height = H;
 
-// ─── LIVROS ─────────────────────────────────────────────────
+// Pixel buffers: value 0 (black) to 255 (white)
+const pixelBuffer = new Uint8Array(W * H);     // current rendered content
+const ghostBuffer = new Uint8Array(W * H);     // previous frame (for ghosting)
+const displayBuffer = new Uint8Array(W * H);   // after dithering (to show)
+
+// For ghosting: blend factor
+const GHOST_MAX = 0.15;
+
+// ── E-INK EFFECTS ──────────────────────────────────────────
+let refreshing = false;
+const bitDepthEl = document.getElementById('bitDepth');
+const ghostLevelEl = document.getElementById('ghostLevel');
+const genreFilterEl = document.getElementById('genreFilter');
+const infoPanel = document.getElementById('infoPanel');
+
+function getBitDepth() { return parseInt(bitDepthEl.value); }
+function getGhostFactor() { return parseInt(ghostLevelEl.value) / 100; }
+
+function clearBuffer(buf, val = 255) { buf.fill(val); }
+
+function copyBuffer(src, dst) { dst.set(src); }
+
+// Floyd-Steinberg dithering
+function floydSteinberg(src, dst, w, h, levels) {
+  const err = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) err[i] = src[i];
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = y * w + x;
+      const oldP = err[idx];
+      const newP = Math.round(oldP / 255 * (levels - 1)) * (255 / (levels - 1));
+      const quantErr = oldP - newP;
+      dst[idx] = Math.max(0, Math.min(255, Math.round(newP)));
+
+      if (x + 1 < w) err[idx + 1] += quantErr * 7 / 16;
+      if (y + 1 < h) {
+        if (x > 0) err[idx + w - 1] += quantErr * 3 / 16;
+        err[idx + w] += quantErr * 5 / 16;
+        if (x + 1 < w) err[idx + w + 1] += quantErr * 1 / 16;
+      }
+    }
+  }
+}
+
+// Threshold dither (1-bit simple)
+function thresholdDither(src, dst, w, h, levels) {
+  const step = 255 / (levels - 1);
+  for (let i = 0; i < w * h; i++) {
+    dst[i] = Math.round(src[i] / step) * step;
+  }
+}
+
+function applyDither(src, dst, w, h, bitDepth) {
+  const levels = 1 << bitDepth;
+  if (bitDepth <= 2) {
+    floydSteinberg(src, dst, w, h, levels);
+  } else {
+    thresholdDither(src, dst, w, h, levels);
+  }
+}
+
+function applyGhosting(target, ghost, factor) {
+  if (factor <= 0) return;
+  for (let i = 0; i < W * H; i++) {
+    target[i] = Math.round(target[i] * (1 - factor) + ghost[i] * factor);
+  }
+}
+
+// ── REFRESH GLOBAL ─────────────────────────────────────────
+function doGlobalRefresh(callback) {
+  if (refreshing) { callback(); return; }
+  refreshing = true;
+
+  // Black flash
+  for (let i = 0; i < W * H; i++) pixelBuffer[i] = 0;
+  renderDisplayBuffer();
+  drawToScreen();
+  setTimeout(() => {
+    // White flash
+    for (let i = 0; i < W * H; i++) pixelBuffer[i] = 255;
+    renderDisplayBuffer();
+    drawToScreen();
+    setTimeout(() => {
+      refreshing = false;
+      callback();
+    }, 80);
+  }, 80);
+}
+
+// ── RENDER BUFFER TO CANVAS ────────────────────────────────
+function renderDisplayBuffer() {
+  const bitDepth = getBitDepth();
+  const ghostFactor = getGhostFactor();
+  const tempBuf = new Uint8Array(W * H);
+  tempBuf.set(pixelBuffer);
+
+  // Ghosting
+  applyGhosting(tempBuf, ghostBuffer, ghostFactor);
+
+  // Dithering
+  applyDither(tempBuf, displayBuffer, W, H, bitDepth);
+
+  // Save to ghost buffer for next frame
+  copyBuffer(pixelBuffer, ghostBuffer);
+}
+
+function drawToScreen() {
+  const imageData = ctx.createImageData(W, H);
+  for (let i = 0; i < W * H; i++) {
+    const v = displayBuffer[i];
+    const idx = i * 4;
+    imageData.data[idx] = v;
+    imageData.data[idx + 1] = v;
+    imageData.data[idx + 2] = v;
+    imageData.data[idx + 3] = 255;
+  }
+  ctx.putImageData(imageData, 0, 0);
+}
+
+function updateInfo(msg) {
+  const bit = getBitDepth();
+  infoPanel.textContent = `${W}×${H} · ${bit}-bit · ${msg}`;
+}
+
+// ─── TEXT DRAWING (via canvas fillText) ─────────────────────
+function drawText(buf, x, y, text, size, color, font = 'Georgia') {
+  // Render text to a temp canvas, then downsample to pixel buffer
+  const scale = 2;
+  const tc = document.createElement('canvas');
+  tc.width = W * scale; tc.height = H * scale;
+  const tctx = tc.getContext('2d');
+  tctx.fillStyle = '#f5f0e8';
+  tctx.fillRect(0, 0, tc.width, tc.height);
+  tctx.fillStyle = `rgb(${color},${color},${color})`;
+  tctx.font = `${size * scale}px ${font}`;
+  tctx.textBaseline = 'top';
+  const lines = text.split('\n');
+  lines.forEach((line, i) => {
+    tctx.fillText(line, x * scale, (y + i * size * 1.3) * scale);
+  });
+
+  const imgData = tctx.getImageData(0, 0, W * scale, H * scale);
+  for (let py = 0; py < H; py++) {
+    for (let px = 0; px < W; px++) {
+      const si = (py * scale * W * scale + px * scale) * 4;
+      const gray = Math.round(
+        imgData.data[si] * 0.299 + imgData.data[si + 1] * 0.587 + imgData.data[si + 2] * 0.114
+      );
+      const di = py * W + px;
+      buf[di] = Math.min(buf[di], gray); // min = darker wins (text over background)
+    }
+  }
+}
+
+function fillBuf(buf, gray) { buf.fill(gray); }
+
+function drawRect(buf, x, y, w, h, gray) {
+  for (let py = y; py < Math.min(y + h, H); py++) {
+    for (let px = x; px < Math.min(x + w, W); px++) {
+      buf[py * W + px] = gray;
+    }
+  }
+}
+
+function drawChar(buf, x, y, char, size, gray, font = 'Georgia') {
+  drawText(buf, x, y, char, size, gray, font);
+}
+
+// ─── MOCK COVER GENERATOR ─────────────────────────────────
+function generateCover(buf, bookIdx, seed) {
+  const patterns = [
+    (b,i) => { // Stripes
+      for (let y = 0; y < 180; y++)
+        for (let x = 0; x < 120; x++)
+          b[y * 120 + x] = (Math.floor(y / 12) % 2 === 0) ? 40 : 180;
+    },
+    (b,i) => { // Circles
+      const cx = 60, cy = 90;
+      for (let y = 0; y < 180; y++)
+        for (let x = 0; x < 120; x++) {
+          const d = Math.hypot(x - cx, y - cy);
+          b[y * 120 + x] = d < 50 ? 30 : d < 70 ? 160 : 200;
+        }
+    },
+    (b,i) => { // Grid
+      for (let y = 0; y < 180; y++)
+        for (let x = 0; x < 120; x++)
+          b[y * 120 + x] = (x % 20 < 3 || y % 20 < 3) ? 60 : 190;
+    },
+    (b,i) => { // Gradient
+      for (let y = 0; y < 180; y++)
+        for (let x = 0; x < 120; x++)
+          b[y * 120 + x] = Math.round(180 - (x + y) * 0.5);
+    },
+    (b,i) => { // Diagonal
+      for (let y = 0; y < 180; y++)
+        for (let x = 0; x < 120; x++)
+          b[y * 120 + x] = ((x + y * 0.7) % 16 < 4) ? 50 : 185;
+    },
+  ];
+
+  const cvs = document.createElement('canvas');
+  cvs.width = 120; cvs.height = 180;
+  const c = cvs.getContext('2d');
+  c.fillStyle = '#f5f0e8'; c.fillRect(0, 0, 120, 180);
+
+  const pb = new Uint8Array(120 * 180);
+  pb.fill(220);
+
+  if (patterns[bookIdx % patterns.length]) {
+    patterns[bookIdx % patterns.length](pb, bookIdx);
+  }
+
+  // Borders
+  for (let y = 0; y < 180; y++) {
+    for (let x = 0; x < 120; x++) {
+      if (x < 2 || x >= 118 || y < 2 || y >= 178) pb[y * 120 + x] = 0;
+    }
+  }
+
+  const im = c.createImageData(120, 180);
+  for (let i = 0; i < 120 * 180; i++) {
+    im.data[i * 4] = pb[i]; im.data[i * 4 + 1] = pb[i];
+    im.data[i * 4 + 2] = pb[i]; im.data[i * 4 + 3] = 255;
+  }
+  c.putImageData(im, 0, 0);
+
+  // Copy to pixel buffer at position
+  for (let y = 0; y < 180; y++)
+    for (let x = 0; x < 120; x++)
+      buf[(y + 50) * W + (x + 50)] = pb[y * 120 + x];
+}
+
+// ─── BOOKS ──────────────────────────────────────────────────
 const LIVROS = [
-  { titulo: "Dom Quixote", autor: "Miguel de Cervantes" },
-  { titulo: "Memórias Póstumas de Brás Cubas", autor: "Machado de Assis" },
-  { titulo: "1984", autor: "George Orwell" },
-  { titulo: "O Pequeno Príncipe", autor: "Antoine de Saint-Exupéry" },
-  { titulo: "Neuromancer", autor: "William Gibson" },
+  { titulo: 'Dom Quixote', autor: 'Miguel de Cervantes', genero: 'Romance', paginas: 42 },
+  { titulo: 'Memórias Póstumas de Brás Cubas', autor: 'Machado de Assis', genero: 'Romance', paginas: 38 },
+  { titulo: '1984', autor: 'George Orwell', genero: 'Ficção', paginas: 45 },
+  { titulo: 'O Pequeno Príncipe', autor: 'Saint-Exupéry', genero: 'Infantil', paginas: 28 },
+  { titulo: 'Neuromancer', autor: 'William Gibson', genero: 'Ficção Científica', paginas: 36 },
+  { titulo: 'A Metamorfose', autor: 'Franz Kafka', genero: 'Romance', paginas: 32 },
+  { titulo: 'Sherlock Holmes', autor: 'Arthur C. Doyle', genero: 'Mistério', paginas: 40 },
 ];
-const NUM_LIVROS = LIVROS.length;
 let livroAtual = 0;
-let paginaAtual = 1;
-const TOTAL_PAGINAS = 24;
 
-// ─── CONFIG ─────────────────────────────────────────────────
-const configLabels = ["Margem (px)", "Espaçamento (px)", "Tempo tela (min)", "Tamanho fonte", "Intensidade LEDs (%)"];
-const configMin   = [ 0,  0, 1,  0,  0];
-const configMax   = [50, 20, 30, 24, 100];
-const configStep  = [ 1,  1, 1,  4,   5];
-let config        = { margem: 10, espacamento: 4, tempo_tela: 5, fonte: 22, leds: 50 };
-const CONFIG_ITEMS = ["margem", "espacamento", "tempo_tela", "fonte", "leds"];
+// Populate genre filter
+const generos = [...new Set(LIVROS.map(l => l.genero))];
+generos.forEach(g => {
+  const opt = document.createElement('option');
+  opt.value = g; opt.textContent = g;
+  genreFilterEl.appendChild(opt);
+});
+
+// ─── TEXTOS ────────────────────────────────────────────────
+const TEXTOS = [
+  `No lugar da Mancha, de cujo nome não quero lembrar-me, vivia não há muito tempo um fidalgo dos de lança em cabide, adarga antiga, rocim magro e cão de caça. Uma sopa mais de vaca que de carneiro, picadinho quase todas as noites, duelos e quebrantos aos sábados, lentilhas às sextas, e algum pombinho extra aos domingos, consumiam três quartas partes da sua fazenda.`,
+  `O resto dela concluíam saio de veludo, calças de veludo da mesma cor, com seus pés de chumbo — que não eram de chumbo, mas de qualquer outro metal — e borzeguins do mesmo. A idade do nosso fidalgo beirava os cinquenta anos. Era de compleição robusta, seco de carnes, enxuto de rosto, grande madrugador e amigo da caça.`,
+  `Quiseram alguns que o apelido fosse Quijada ou Quesada, que nisto há alguma diferença entre os autores que deste caso escrevem; ainda que por conjeturas verossímeis se deixa entender que se chamava Quijana. Mas isso importa pouco para a nossa história: basta que na narração dela não se saia um ponto da verdade.`,
+  `É, pois, de saber que este sobredito fidalgo, nos intervalos de ócio — que eram os maiores do ano —, se dava a ler livros de cavalarias, com tamanha afeição e gosto, que esqueceu quase de todo o exercício da caça e até a administração de sua fazenda. E chegou a tal extremo o seu curioso desvario, que vendeu muitos alqueires de terra de semeadura para comprar livros de cavalarias para ler.`,
+  `Assim, com estes pensamentos e discursos, veio a perder o pobre fidalgo o juízo, desvelando-se por entender aquelas razões e dar-lhes sentido, que não lho tirara nem lho poderia tirar o próprio Aristóteles, se ressuscitara só para isso.`,
+];
+
+const TOTAL_PAGINAS = 24;
+let paginaAtual = 1;
+
+// ─── STATE ─────────────────────────────────────────────────
+const S = { MENU: 0, LENDO: 1, CONFIG: 2, DORMINDO: 3 };
+let estado = S.MENU;
+let paginaAtual = 1;
+
+// ─── CONFIG ────────────────────────────────────────────────
+const configLabels = ['Margem (px)', 'Espaçamento', 'Tempo tela (min)', 'Tamanho fonte', 'LEDs (%)'];
+const CONFIG_KEYS = ['margem', 'espacamento', 'tempo_tela', 'fonte', 'leds'];
+const configMin = [0, 0, 1, 0, 0];
+const configMax = [50, 20, 30, 24, 100];
+let config = { margem: 10, espacamento: 4, tempo_tela: 5, fonte: 22, leds: 50 };
 let configItem = 0;
 let editMode = false;
 
-// ─── TIMER DE INATIVIDADE ──────────────────────────────────
-const IDLE_SLEEP_MS = 30000; // 30s
+// ─── TIMER ─────────────────────────────────────────────────
+const IDLE_MS = 30000;
 let lastActivity = Date.now();
 let sleepTimer = null;
 
-// ─── TEXTO MOCKADO ─────────────────────────────────────────
-const TEXTOS = [
-  "No lugar da Mancha, de cujo nome não quero lembrar-me, vivia não há muito tempo um fidalgo dos de lança em cabide, adarga antiga, rocim magro e cão de caça. Uma sopa mais de vaca que de carneiro, picadinho quase todas as noites, duelos e quebrantos aos sábados, lentilhas às sextas, e algum pombinho extra aos domingos, consumiam três quartas partes da sua fazenda.",
-  "O resto dela concluíam saio de veludo, calças de veludo da mesma cor, com seus pés de chumbo — que não eram de chumbo, mas de qualquer outro metal — e borzeguins do mesmo. A idade do nosso fidalgo beirava os cinquenta anos. Era de compleição robusta, seco de carnes, enxuto de rosto, grande madrugador e amigo da caça.",
-  "Quiseram alguns que o apelido fosse Quijada ou Quesada, que nisto há alguma diferença entre os autores que deste caso escrevem; ainda que por conjeturas verossímeis se deixa entender que se chamava Quijana. Mas isso importa pouco para a nossa história: basta que na narração dela não se saia um ponto da verdade.",
-  "É, pois, de saber que este sobredito fidalgo, nos intervalos de ócio — que eram os maiores do ano —, se dava a ler livros de cavalarias, com tamanha afeição e gosto, que esqueceu quase de todo o exercício da caça e até a administração de sua fazenda. E chegou a tal extremo o seu curioso desvario, que vendeu muitos alqueires de terra de semeadura para comprar livros de cavalarias para ler.",
-  "Assim, com estes pensamentos e discursos, veio a perder o pobre fidalgo o juízo, desvelando-se por entender aquelas razões e dar-lhes sentido, que não lho tirara nem lho poderia tirar o próprio Aristóteles, se ressuscitara só para isso. Tinha dúvidas sobre as feridas que D. Belianis dava e recebia, porque lhe parecia que por mais hábeis cirurgiões que o curassem, não podia deixar de ter o rosto e todo o corpo cheio de cicatrizes e sinais.",
-];
-
-// ─── RENDERIZAÇÃO ──────────────────────────────────────────
-const screen = document.getElementById('screen');
-
-function einkFlash() {
-  screen.classList.remove('eink-flash');
-  void screen.offsetWidth;
-  screen.classList.add('eink-flash');
+function atualizarTimer() {
+  lastActivity = Date.now();
+  clearTimeout(sleepTimer);
+  sleepTimer = setTimeout(() => {
+    if (estado !== S.DORMINDO) { estado = S.DORMINDO; renderComRefresh(); updateInfo('Deep Sleep 💤'); }
+  }, IDLE_MS);
 }
 
-function renderizar() {
-  einkFlash();
+// ─── RENDER ────────────────────────────────────────────────
+function renderComRefresh(callback) {
+  doGlobalRefresh(() => {
+    renderFrame();
+    if (callback) callback();
+  });
+}
+
+function renderFrame() {
+  fillBuf(pixelBuffer, 238); // off-white background
 
   switch (estado) {
-    case ESTADOS.MENU_LIVROS:
-      renderMenu();
-      break;
-    case ESTADOS.LENDO:
-      renderLendo();
-      break;
-    case ESTADOS.CONFIG:
-      renderConfig();
-      break;
-    case ESTADOS.DORMINDO:
-      renderDormindo();
-      break;
-  }
-}
-
-function renderMenu() {
-  let html = `
-    <div class="screen-header">
-      <span class="title">📖 BIBLIOTECA</span>
-      <span class="status">${LIVROS.length} livros</span>
-    </div>
-    <div class="screen-content">
-      <ul class="book-list">`;
-
-  for (let i = 0; i < NUM_LIVROS; i++) {
-    const active = i === livroAtual ? 'active' : '';
-    html += `
-      <li class="book-item ${active}">
-        <span class="icon">📘</span>
-        <span>${LIVROS[i].titulo}</span>
-        <span class="arrow">▶</span>
-      </li>`;
+    case S.MENU: renderMenuFrame(); break;
+    case S.LENDO: renderLendoFrame(); break;
+    case S.CONFIG: renderConfigFrame(); break;
+    case S.DORMINDO: renderDormindoFrame(); break;
   }
 
-  html += `</ul></div>
-    <div class="menu-hint">▲/▼ navegar &nbsp;● abrir &nbsp;● (1s) Config</div>`;
-
-  screen.innerHTML = html;
+  renderDisplayBuffer();
+  drawToScreen();
+  updateInfo(estado === S.MENU ? 'Menu' : estado === S.LENDO ? `Lendo p.${paginaAtual}` : estado === S.CONFIG ? 'Config' : '💤');
 }
 
-function renderLendo() {
-  const textoIdx = (paginaAtual - 1) % TEXTOS.length;
-  const texto = TEXTOS[textoIdx];
-  const configFont = config.fonte;
-
-  let html = `
-    <div class="screen-header">
-      <span class="title">📄 ${LIVROS[livroAtual].titulo.substring(0, 22)}</span>
-      <span class="status">${paginaAtual}/${TOTAL_PAGINAS}</span>
-    </div>
-    <div class="screen-content">
-      <div class="reading-text" style="font-size:${configFont <= 14 ? 13 : configFont <= 18 ? 15 : 18}px; line-height:${1.5 + config.espacamento * 0.04}; padding:0 ${config.margem * 0.5}px">
-        <p>${texto}</p>
-        <p style="text-indent:1.5em; margin-top:6px">Continuou, pois, o nosso fidalgo nas suas leituras, enfrascando-se tanto nelas, que passava as noites a ler desde o sol posto até o amanhecer, e os dias desde o amanhecer até o sol posto. E assim, do pouco dormir e do muito ler, se lhe secou o cérebro, de maneira que veio a perder o juízo.</p>
-      </div>
-    </div>
-    <div class="page-num">▲ ▼ virar página &nbsp;● menu &nbsp;● (1s) Config</div>`;
-
-  screen.innerHTML = html;
+function getFilteredBooks() {
+  const gen = genreFilterEl.value;
+  return gen ? LIVROS.filter(l => l.genero === gen) : LIVROS;
 }
 
-function renderConfig() {
-  let html = `
-    <div class="screen-header">
-      <span class="title">⚙️ CONFIGURAÇÕES</span>
-      <span class="status">${editMode ? '✏️ Editando' : ''}</span>
-    </div>
-    <div class="screen-content">`;
+function renderMenuFrame() {
+  const books = getFilteredBooks();
+  const activeIdx = books.indexOf(LIVROS[livroAtual]);
+  if (activeIdx < 0) { livroAtual = LIVROS.indexOf(books[0] || LIVROS[0]); }
 
-  for (let i = 0; i < CONFIG_ITEMS.length; i++) {
-    const key = CONFIG_ITEMS[i];
-    const active = i === configItem ? 'active' : '';
-    const editing = editMode && active ? 'editing' : '';
-    let displayVal = config[key];
-    if (key === 'leds') displayVal = displayVal + '%';
-    else if (key === 'fonte') {
-      if (config.fonte === 14) displayVal = 'Pequena (14)';
-      else if (config.fonte === 18) displayVal = 'Média (18)';
-      else if (config.fonte === 22) displayVal = 'Grande (22)';
-      else if (config.fonte === 24) displayVal = 'Extra (24)';
+  // Title bar
+  drawRect(pixelBuffer, 0, 0, W, 36, 200);
+  drawText(pixelBuffer, 20, 8, '📖 BIBLIOTECA', 14, 40, 'system-ui');
+  drawText(pixelBuffer, W - 120, 10, `${books.length} livros`, 11, 100, 'system-ui');
+
+  // List books with covers
+  let yOff = 50;
+  books.forEach((livro, i) => {
+    const isActive = i === activeIdx;
+    const bg = isActive ? 205 : 230;
+
+    // Cover thumbnail
+    const cBuf = new Uint8Array(120 * 180);
+    generateCover(cBuf, LIVROS.indexOf(livro), i);
+    for (let py = 0; py < 180 && yOff + py < H; py++)
+      for (let px = 0; px < 120; px++)
+        pixelBuffer[(yOff + py) * W + (px + 50)] = cBuf[py * 120 + px];
+
+    // Book info
+    const tx = 190;
+    drawText(pixelBuffer, tx, yOff + 8, isActive ? `▶ ${livro.titulo}` : `  ${livro.titulo}`, 13, isActive ? 20 : 60, 'Georgia');
+    drawText(pixelBuffer, tx, yOff + 30, livro.autor, 10, 120, 'system-ui');
+    drawText(pixelBuffer, tx, yOff + 48, livro.genero, 9, 150, 'system-ui');
+
+    if (isActive) {
+      // Selection border
+      for (let px = 46; px < 174; px++) {
+        if (yOff + 0 < H) pixelBuffer[(yOff + 0) * W + px] = 0;
+        if (yOff + 179 < H) pixelBuffer[(yOff + 179) * W + px] = 0;
+      }
     }
 
-    html += `
-      <div class="config-item ${active} ${editing}">
-        <span class="label">${i === configItem && editMode ? '✏️ ' : ''}${configLabels[i]}</span>
-        <span class="value">${displayVal}</span>
-      </div>`;
+    yOff += 100;
+  });
+
+  if (books.length === 0) {
+    drawText(pixelBuffer, 200, 200, 'Nenhum livro neste gênero', 16, 120, 'Georgia');
   }
 
-  html += `</div>`;
-
-  if (editMode) {
-    html += `<div class="config-hint">▲/▼ ajustar &nbsp;● confirmar &nbsp;● (1s) sair sem salvar</div>`;
-  } else {
-    html += `<div class="config-hint">▲/▼ navegar &nbsp;● editar &nbsp;● (1s) voltar</div>`;
-  }
-
-  screen.innerHTML = html;
+  drawText(pixelBuffer, 20, H - 24, '▲/▼ navegar  ● abrir  ● (1s) Config', 10, 140, 'system-ui');
 }
 
-function renderDormindo() {
-  screen.innerHTML = `
-    <div class="sleep-overlay">
-      <div class="icon">💤</div>
-      <div class="msg">Deep Sleep</div>
-      <div class="sub">Pressione ● para acordar</div>
-    </div>`;
+function renderLendoFrame() {
+  const livro = LIVROS[livroAtual];
+
+  // Header
+  drawRect(pixelBuffer, 0, 0, W, 34, 200);
+  drawText(pixelBuffer, 16, 8, `📄 ${livro.titulo.substring(0, 28)}`, 12, 40, 'system-ui');
+  drawText(pixelBuffer, W - 80, 9, `${paginaAtual}/${TOTAL_PAGINAS}`, 11, 100, 'system-ui');
+
+  // Text area
+  const margin = config.margem + 16;
+  const linhaAlt = config.espacamento + 20;
+  const fontSize = config.fonte <= 14 ? 12 : config.fonte <= 18 ? 14 : config.fonte <= 22 ? 16 : 18;
+
+  const textoIdx = (paginaAtual - 1) % TEXTOS.length;
+  const texto = TEXTOS[textoIdx];
+  const text2 = 'Continuou, pois, o nosso fidalgo nas suas leituras, enfrascando-se tanto nelas, que passava as noites a ler desde o sol posto até o amanhecer, e os dias desde o amanhecer até o sol posto. E assim, do pouco dormir e do muito ler, se lhe secou o cérebro, de maneira que veio a perder o juízo.';
+
+  // Page content
+  drawText(pixelBuffer, margin, 50, texto, fontSize, 30, 'Georgia');
+  drawText(pixelBuffer, margin, 50 + linhaAlt * 9, text2, fontSize, 30, 'Georgia');
+
+  drawText(pixelBuffer, 20, H - 22, '▲/▼ página  ● menu  ● (1s) Config', 10, 140, 'system-ui');
+}
+
+function renderConfigFrame() {
+  drawRect(pixelBuffer, 0, 0, W, 34, 200);
+  drawText(pixelBuffer, 16, 8, editMode ? '✏️ CONFIG — Editando' : '⚙️ CONFIGURAÇÕES', 12, 40, 'system-ui');
+
+  let yOff = 56;
+  CONFIG_KEYS.forEach((key, i) => {
+    const isActive = i === configItem;
+    const isEditing = editMode && isActive;
+    const bg = isEditing ? 170 : isActive ? 195 : 225;
+
+    drawRect(pixelBuffer, 16, yOff, W - 32, 34, bg);
+
+    let label = configLabels[i];
+    let val = config[key];
+    if (key === 'leds') val = val + '%';
+    else if (key === 'fonte') {
+      val = ({14:'Pequena',18:'Média',22:'Grande',24:'Extra'})[val] || val;
+    }
+
+    const prefix = isEditing ? '✏️ ' : isActive ? '▶ ' : '  ';
+    drawText(pixelBuffer, 28, yOff + 8, `${prefix}${label}`, 11, isActive ? 10 : 80, 'system-ui');
+
+    const valStr = String(val);
+    drawText(pixelBuffer, W - 32 - valStr.length * 8, yOff + 8, valStr, 11, isActive ? 0 : 100, 'system-ui');
+
+    yOff += 40;
+  });
+
+  if (editMode) {
+    drawText(pixelBuffer, 20, H - 22, '▲/▼ ajustar  ● confirmar  ● (1s) sair', 10, 140, 'system-ui');
+  } else {
+    drawText(pixelBuffer, 20, H - 22, '▲/▼ navegar  ● editar  ● (1s) voltar', 10, 140, 'system-ui');
+  }
+}
+
+function renderDormindoFrame() {
+  fillBuf(pixelBuffer, 230);
+  drawText(pixelBuffer, 280, 180, '💤', 48, 120, 'system-ui');
+  drawText(pixelBuffer, 260, 240, 'Deep Sleep', 20, 80, 'system-ui');
+  drawText(pixelBuffer, 230, 270, 'Pressione ● para acordar', 12, 130, 'system-ui');
 }
 
 // ─── HANDLERS ──────────────────────────────────────────────
+function handleMenu(dir) {
+  const books = getFilteredBooks();
+  if (books.length === 0) return false;
+  const activeIdx = books.indexOf(LIVROS[livroAtual]);
+  let idx = activeIdx >= 0 ? activeIdx : 0;
 
-function handleMenu(dirBotoes) {
-  const { cima, baixo, sel, selLong } = dirBotoes;
-
-  if (cima) {
-    livroAtual = (livroAtual - 1 + NUM_LIVROS) % NUM_LIVROS;
-    atualizarTimer();
-    return true;
-  }
-  if (baixo) {
-    livroAtual = (livroAtual + 1) % NUM_LIVROS;
-    atualizarTimer();
-    return true;
-  }
-  if (sel) {
-    paginaAtual = 1;
-    estado = ESTADOS.LENDO;
-    atualizarTimer();
-    return true;
-  }
-  if (selLong) {
-    editMode = false;
-    configItem = 0;
-    estado = ESTADOS.CONFIG;
-    atualizarTimer();
-    return true;
-  }
+  if (dir.cima) { idx = (idx - 1 + books.length) % books.length; livroAtual = LIVROS.indexOf(books[idx]); atualizarTimer(); return true; }
+  if (dir.baixo) { idx = (idx + 1) % books.length; livroAtual = LIVROS.indexOf(books[idx]); atualizarTimer(); return true; }
+  if (dir.sel) { paginaAtual = 1; estado = S.LENDO; atualizarTimer(); return true; }
+  if (dir.selLong) { editMode = false; configItem = 0; estado = S.CONFIG; atualizarTimer(); return true; }
   return false;
 }
 
-function handleLendo(dirBotoes) {
-  const { cima, baixo, sel, selLong } = dirBotoes;
-
-  if (cima && paginaAtual > 1) {
-    paginaAtual--;
-    atualizarTimer();
-    return true;
-  }
-  if (baixo && paginaAtual < TOTAL_PAGINAS) {
-    paginaAtual++;
-    atualizarTimer();
-    return true;
-  }
-  if (sel) {
-    estado = ESTADOS.MENU_LIVROS;
-    atualizarTimer();
-    return true;
-  }
-  if (selLong) {
-    editMode = false;
-    configItem = 0;
-    estado = ESTADOS.CONFIG;
-    atualizarTimer();
-    return true;
-  }
+function handleLendo(dir) {
+  if (dir.cima && paginaAtual > 1) { paginaAtual--; atualizarTimer(); return true; }
+  if (dir.baixo && paginaAtual < TOTAL_PAGINAS) { paginaAtual++; atualizarTimer(); return true; }
+  if (dir.sel) { estado = S.MENU; atualizarTimer(); return true; }
+  if (dir.selLong) { editMode = false; configItem = 0; estado = S.CONFIG; atualizarTimer(); return true; }
   return false;
 }
 
-function handleConfig(dirBotoes) {
-  const { cima, baixo, sel, selLong } = dirBotoes;
-
+function handleConfig(dir) {
   if (editMode) {
-    if (cima) {
-      const key = CONFIG_ITEMS[configItem];
-      const step = configStep[configItem];
-      config[key] = Math.min(config[key] + step, configMax[configItem]);
-      // Fonte: 14→18→22→24 (cíclico via step)
-      if (key === 'fonte') {
-        const fontes = [14, 18, 22, 24];
-        const idx = fontes.indexOf(config.fonte);
+    if (dir.cima) {
+      if (CONFIG_KEYS[configItem] === 'fonte') {
+        const fontes = [14, 18, 22, 24]; const idx = fontes.indexOf(config.fonte);
         config.fonte = fontes[(idx + 1) % fontes.length];
+      } else {
+        config[CONFIG_KEYS[configItem]] = Math.min(config[CONFIG_KEYS[configItem]] + 1, configMax[configItem]);
       }
-      atualizarTimer();
-      return true;
+      atualizarTimer(); return true;
     }
-    if (baixo) {
-      const key = CONFIG_ITEMS[configItem];
-      if (key === 'fonte') {
-        const fontes = [14, 18, 22, 24];
-        const idx = fontes.indexOf(config.fonte);
+    if (dir.baixo) {
+      if (CONFIG_KEYS[configItem] === 'fonte') {
+        const fontes = [14, 18, 22, 24]; const idx = fontes.indexOf(config.fonte);
         config.fonte = fontes[(idx - 1 + fontes.length) % fontes.length];
       } else {
-        config[key] = Math.max(config[key] - configStep[configItem], configMin[configItem]);
+        config[CONFIG_KEYS[configItem]] = Math.max(config[CONFIG_KEYS[configItem]] - 1, configMin[configItem]);
       }
-      atualizarTimer();
-      return true;
+      atualizarTimer(); return true;
     }
-    if (sel) {
-      editMode = false;
-      atualizarTimer();
-      return true;
-    }
-    if (selLong) {
-      editMode = false;
-      estado = paginaAtual > 0 ? ESTADOS.MENU_LIVROS : ESTADOS.MENU_LIVROS;
-      atualizarTimer();
-      return true;
-    }
+    if (dir.sel) { editMode = false; atualizarTimer(); return true; }
+    if (dir.selLong) { editMode = false; estado = S.MENU; atualizarTimer(); return true; }
   } else {
-    if (cima) {
-      configItem = (configItem - 1 + CONFIG_ITEMS.length) % CONFIG_ITEMS.length;
-      atualizarTimer();
-      return true;
-    }
-    if (baixo) {
-      configItem = (configItem + 1) % CONFIG_ITEMS.length;
-      atualizarTimer();
-      return true;
-    }
-    if (sel) {
-      editMode = true;
-      atualizarTimer();
-      return true;
-    }
-    if (selLong) {
-      editMode = false;
-      estado = paginaAtual > 0 ? ESTADOS.MENU_LIVROS : ESTADOS.MENU_LIVROS;
-      atualizarTimer();
-      return true;
-    }
+    if (dir.cima) { configItem = (configItem - 1 + CONFIG_KEYS.length) % CONFIG_KEYS.length; atualizarTimer(); return true; }
+    if (dir.baixo) { configItem = (configItem + 1) % CONFIG_KEYS.length; atualizarTimer(); return true; }
+    if (dir.sel) { editMode = true; atualizarTimer(); return true; }
+    if (dir.selLong) { editMode = false; estado = S.MENU; atualizarTimer(); return true; }
   }
   return false;
 }
 
-// ─── CICLO PRINCIPAL ──────────────────────────────────────
-function processarInput(dirBotoes) {
-  if (estado === ESTADOS.DORMINDO) {
-    // Acorda
-    estado = ESTADOS.MENU_LIVROS;
-    atualizarTimer();
-    renderizar();
-    return;
+function processarInput(dir) {
+  if (estado === S.DORMINDO) {
+    estado = S.MENU; atualizarTimer(); renderComRefresh(); return;
   }
 
   let mudou = false;
   switch (estado) {
-    case ESTADOS.MENU_LIVROS: mudou = handleMenu(dirBotoes); break;
-    case ESTADOS.LENDO:       mudou = handleLendo(dirBotoes); break;
-    case ESTADOS.CONFIG:      mudou = handleConfig(dirBotoes); break;
+    case S.MENU: mudou = handleMenu(dir); break;
+    case S.LENDO: mudou = handleLendo(dir); break;
+    case S.CONFIG: mudou = handleConfig(dir); break;
   }
 
-  if (mudou) renderizar();
+  if (mudou) renderComRefresh();
 }
 
-// ─── TIMER DE INATIVIDADE ─────────────────────────────────
-function atualizarTimer() {
-  lastActivity = Date.now();
-  clearTimeout(sleepTimer);
-  sleepTimer = setTimeout(entrarDeepSleep, IDLE_SLEEP_MS);
-}
-
-function entrarDeepSleep() {
-  if (estado === ESTADOS.DORMINDO) return;
-  estado = ESTADOS.DORMINDO;
-  renderizar();
-}
-
-// ─── BOTÕES (com long-press) ──────────────────────────────
+// ─── BOTÕES ────────────────────────────────────────────────
 function setupBotoes() {
-  function setupBtn(id, callback) {
+  ['btnUp','btnDown','btnSel'].forEach((id, bi) => {
     const el = document.getElementById(id);
-    let pressTimer = null;
-    let isLong = false;
-
-    function down(e) {
-      e.preventDefault();
-      el.classList.add('pressed');
-      isLong = false;
-      pressTimer = setTimeout(() => {
-        isLong = true;
-        el.classList.add('btn-long');
-      }, 1000);
+    let pt, isLong = false;
+    function down(e) { e.preventDefault(); el.classList.add('pressed'); isLong = false; pt = setTimeout(() => { isLong = true; }, 1000); }
+    function up() { el.classList.remove('pressed'); clearTimeout(pt);
+      const cima = bi === 0, baixo = bi === 1, sel = bi === 2;
+      processarInput({ cima: cima && !isLong, baixo: baixo && !isLong, sel: sel && !isLong, selLong: sel && isLong });
     }
-
-    function up(e) {
-      el.classList.remove('pressed', 'btn-long');
-      clearTimeout(pressTimer);
-      callback(isLong);
-    }
-
     el.addEventListener('mousedown', down);
     el.addEventListener('mouseup', up);
-    el.addEventListener('mouseleave', () => {
-      el.classList.remove('pressed', 'btn-long');
-      clearTimeout(pressTimer);
-    });
-
-    el.addEventListener('touchstart', (e) => { e.preventDefault(); down(e); });
+    el.addEventListener('mouseleave', () => { el.classList.remove('pressed'); clearTimeout(pt); });
+    el.addEventListener('touchstart', down, {passive: false});
     el.addEventListener('touchend', up);
-    el.addEventListener('touchcancel', () => {
-      el.classList.remove('pressed', 'btn-long');
-      clearTimeout(pressTimer);
-    });
-  }
-
-  setupBtn('btnUp', (long) => {
-    if (estado === ESTADOS.CONFIG && editMode && !long) {
-      // No edit mode, ▲ adjusts value up
-    }
-    processarInput({ cima: !long, baixo: false, sel: false, selLong: false });
   });
 
-  setupBtn('btnDown', (long) => {
-    processarInput({ cima: false, baixo: !long, sel: false, selLong: false });
-  });
-
-  setupBtn('btnSel', (long) => {
-    processarInput({ cima: false, baixo: false, sel: !long, selLong: long });
-  });
-
-  // Teclado
-  document.addEventListener('keydown', (e) => {
-    switch (e.key) {
-      case 'ArrowUp':
-      case 'w': processarInput({ cima: true, baixo: false, sel: false, selLong: false }); e.preventDefault(); break;
-      case 'ArrowDown':
-      case 's': processarInput({ cima: false, baixo: true, sel: false, selLong: false }); e.preventDefault(); break;
-      case 'Enter':
-      case ' ':
-        processarInput({ cima: false, baixo: false, sel: true, selLong: false }); e.preventDefault(); break;
-      case 'c':
-      case 'C':
-        processarInput({ cima: false, baixo: false, sel: false, selLong: true }); e.preventDefault(); break;
+  document.addEventListener('keydown', e => {
+    switch(e.key) {
+      case 'ArrowUp': case 'w': processarInput({cima:true,baixo:false,sel:false,selLong:false}); e.preventDefault(); break;
+      case 'ArrowDown': case 's': processarInput({cima:false,baixo:true,sel:false,selLong:false}); e.preventDefault(); break;
+      case 'Enter': case ' ': processarInput({cima:false,baixo:false,sel:true,selLong:false}); e.preventDefault(); break;
+      case 'c': case 'C': processarInput({cima:false,baixo:false,sel:false,selLong:true}); break;
     }
   });
+
+  document.getElementById('btnRefresh').addEventListener('click', () => {
+    if (!refreshing) renderComRefresh();
+  });
+
+  genreFilterEl.addEventListener('change', () => {
+    const books = getFilteredBooks();
+    if (books.length > 0) livroAtual = LIVROS.indexOf(books[0]);
+    renderComRefresh();
+  });
+
+  bitDepthEl.addEventListener('change', () => { renderFrame(); });
+  ghostLevelEl.addEventListener('change', () => { renderFrame(); });
 }
 
-// ─── INICIALIZAÇÃO ────────────────────────────────────────
-renderizar();
+// ─── INIT ──────────────────────────────────────────────────
+clearBuffer(pixelBuffer, 238);
 setupBotoes();
 atualizarTimer();
+renderComRefresh();
 </script>
-
 </body>
 </html>
