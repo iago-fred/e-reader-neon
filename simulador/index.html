@@ -160,8 +160,8 @@ function drawRect(buf, x, y, w, h, g) {
       buf[py * W + px] = g;
 }
 
-function drawText(buf, x, y, text, size, color, font) {
-  const s = 3; // supersample
+function drawText(buf, x, y, text, size, color, font, maxW) {
+  const s = 3;
   const tc = document.createElement('canvas');
   tc.width = W * s; tc.height = H * s;
   const tctx = tc.getContext('2d');
@@ -170,8 +170,35 @@ function drawText(buf, x, y, text, size, color, font) {
   tctx.fillStyle = `rgb(${color},${color},${color})`;
   tctx.font = `${size * s}px ${font || 'Georgia'}`;
   tctx.textBaseline = 'top';
-  const lines = text.split('\n');
-  lines.forEach((line, i) => { tctx.fillText(line, x * s, (y + i * size * 1.3) * s); });
+
+  // Word wrapping
+  const lines = [];
+  const paragraphBreak = text.split('\n');
+  const maxPx = maxW ? maxW * s : W * s;
+  paragraphBreak.forEach(para => {
+    const words = para.split(' ');
+    let line = '';
+    words.forEach(word => {
+      const test = line ? line + ' ' + word : word;
+      if (tctx.measureText(test).width <= maxPx) {
+        line = test;
+      } else {
+        if (line) lines.push(line);
+        line = word;
+      }
+    });
+    if (line) lines.push(line);
+    lines.push(''); // paragraph break
+  });
+  // Remove trailing paragraph break
+  if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
+
+  lines.forEach((line, i) => {
+    const ly = y + i * size * 1.3;
+    if (ly > H) return;
+    tctx.fillText(line, x * s, ly * s);
+  });
+
   const id = tctx.getImageData(0, 0, W * s, H * s);
   for (let py = 0; py < H; py++)
     for (let px = 0; px < W; px++) {
@@ -267,91 +294,107 @@ function getFiltered() {
   return g ? LIVROS.filter(l => l.g === g) : LIVROS;
 }
 
+let menuScroll = 0;
+
 function renderMenu() {
   const books = getFiltered();
-  if (books.length === 0) { drawText(pixelBuffer, 120, 350, 'Nenhum livro', 16, 120); return; }
+  if (books.length === 0) { drawText(pixelBuffer, 140, 380, 'Nenhum livro', 14, 120, 'Georgia', 200); return; }
   let ai = books.indexOf(LIVROS[livroAtual]);
   if (ai < 0) { livroAtual = LIVROS.indexOf(books[0]); ai = 0; }
 
   drawRect(pixelBuffer, 0, 0, W, 32, 200);
-  drawText(pixelBuffer, 12, 6, '📖 BIBLIOTECA', 13, 40, 'system-ui');
-  drawText(pixelBuffer, W - 60, 8, `${books.length}`, 10, 100, 'system-ui');
+  drawText(pixelBuffer, 12, 6, '📖  BIBLIOTECA', 13, 40, 'system-ui');
+  drawText(pixelBuffer, W - 50, 8, `${books.length} livros`, 9, 100, 'system-ui');
+
+  // Auto-scroll: keep selected book visible
+  const itemH = 140;
+  const maxY = H - 60;
+  const targetY = 44 + ai * itemH;
+  if (targetY < menuScroll + 44) {
+    menuScroll = Math.max(0, targetY - 44 - 10);
+  } else if (targetY + itemH > menuScroll + maxY) {
+    menuScroll = Math.max(0, targetY + itemH - maxY);
+  }
+  // Clamp scroll
+  menuScroll = Math.max(0, Math.min(menuScroll, Math.max(0, books.length * itemH - maxY + 44)));
 
   let y = 44;
-  // Pre-generate covers
-  const coverCache = LIVROS.map((_, i) => genCover(null, i));
-
   books.forEach((livro, i) => {
+    const visualY = y - menuScroll;
     const ia = i === ai;
-    const bg = ia ? 205 : 228;
-    if (y + 140 > H) return;
+    if (visualY + itemH < 40 || visualY > H) { y += itemH; return; }
+
+    // Item background
+    if (ia) drawRect(pixelBuffer, 8, visualY + 2, W - 16, itemH - 4, 205);
 
     // Cover
     const cpb = genCover(null, LIVROS.indexOf(livro));
-    drawCover(pixelBuffer, cpb, 12, y + 4);
+    drawCover(pixelBuffer, cpb, 12, visualY + 5);
 
     // Info
     const tx = 100;
-    drawText(pixelBuffer, tx, y + 4, ia ? `▶ ${livro.t}` : `  ${livro.t}`, 12, ia ? 20 : 60);
-    drawText(pixelBuffer, tx, y + 24, livro.a, 9, 110, 'system-ui');
-    drawText(pixelBuffer, tx, y + 40, livro.g, 8, 140, 'system-ui');
+    drawText(pixelBuffer, tx, visualY + 5, ia ? `▶ ${livro.t}` : `  ${livro.t}`, 12, ia ? 15 : 55, 'Georgia', 360);
+    drawText(pixelBuffer, tx, visualY + 25, livro.a, 9, 100, 'system-ui', 360);
+    drawText(pixelBuffer, tx, visualY + 40, livro.g, 8, 130, 'system-ui', 360);
 
-    // Selection indicator
-    if (ia) {
-      drawRect(pixelBuffer, 10, y + 2, 84, 132, 0);
-    }
+    // Selection border on cover
+    if (ia) drawRect(pixelBuffer, 10, visualY + 3, 84, 132, 0);
 
     // Separator
-    drawRect(pixelBuffer, 100, y + 134, W - 110, 1, 210);
+    drawRect(pixelBuffer, 100, visualY + 136, W - 110, 1, 210);
 
-    y += 144;
+    y += itemH;
   });
 
-  drawText(pixelBuffer, 10, H - 20, '▲/▼ ● abrir  ●(1s) Config', 9, 140, 'system-ui');
+  drawText(pixelBuffer, 10, H - 20, '▲/▼ navegar  ● abrir  ●(1s) Config', 9, 140, 'system-ui', 460);
 }
 
 function renderLendo() {
   const livro = LIVROS[livroAtual];
 
   drawRect(pixelBuffer, 0, 0, W, 32, 200);
-  drawText(pixelBuffer, 10, 6, `📄 ${livro.t.substring(0, 24)}`, 11, 40, 'system-ui');
-  drawText(pixelBuffer, W - 60, 7, `${paginaAtual}/${TOTAL_PAG}`, 10, 100, 'system-ui');
+  drawText(pixelBuffer, 10, 6, `📄 ${livro.t.substring(0, 22)}`, 11, 40, 'system-ui', 320);
+  drawText(pixelBuffer, W - 56, 7, `${paginaAtual}/${TOTAL_PAG}`, 10, 100, 'system-ui', 46);
 
-  const mg = cfg.margem + 10;
-  const lh = cfg.espacamento + 18;
+  const m = Math.min(cfg.margem + 8, 40);
+  const lh = cfg.espacamento + 19;
   const fs = cfg.fonte <= 14 ? 12 : cfg.fonte <= 18 ? 14 : cfg.fonte <= 22 ? 15 : 16;
+  const maxTextW = W - m * 2 - 8;
 
   const ti = (paginaAtual - 1) % TEXTOS.length;
   const t1 = TEXTOS[ti];
-  const t2 = `Continuou o nosso fidalgo nas suas leituras, passando as noites a ler do sol posto ao amanhecer. E assim, do pouco dormir e do muito ler, se lhe secou o cérebro, de maneira que veio a perder o juízo.`;
+  const t2 = 'Continuou o nosso fidalgo nas suas leituras, passando as noites a ler do sol posto ao amanhecer, e os dias do amanhecer ao sol posto. E assim, do pouco dormir e do muito ler, se lhe secou o cérebro, de maneira que veio a perder o juízo.';
 
-  drawText(pixelBuffer, mg, 44, t1, fs, 30);
-  drawText(pixelBuffer, mg, 44 + lh * 9, t2, fs, 30);
+  drawText(pixelBuffer, m, 44, t1, fs, 30, 'Georgia', maxTextW);
+  drawText(pixelBuffer, m, 44 + lh * 10, t2, fs, 30, 'Georgia', maxTextW);
 
-  drawText(pixelBuffer, 10, H - 20, '▲/▼ página  ● menu  ●(1s) Config', 9, 140, 'system-ui');
+  drawText(pixelBuffer, m, H - 20, '▲/▼ página  ● menu  ●(1s) Config', 9, 140, 'system-ui', maxTextW);
 }
 
 function renderConfig() {
   drawRect(pixelBuffer, 0, 0, W, 32, 200);
-  drawText(pixelBuffer, 10, 6, editMode ? '✏️ EDITANDO' : '⚙️ CONFIG', 12, 40, 'system-ui');
+  drawText(pixelBuffer, 10, 6, editMode ? '✏️  EDITANDO' : '⚙️  CONFIGURAÇÕES', 12, 40, 'system-ui', 460);
 
   let y = 48;
   CKEYS.forEach((k, i) => {
     const ia = i === cfgItem, ie = editMode && ia;
-    drawRect(pixelBuffer, 14, y, W - 28, 32, ie ? 170 : ia ? 195 : 225);
+    if (y > H - 40) return;
+    drawRect(pixelBuffer, 10, y, W - 20, 34, ie ? 170 : ia ? 195 : 225);
 
     let v = cfg[k];
     if (k === 'leds') v = v + '%';
-    else if (k === 'fonte') v = ({14:'P',18:'M',22:'G',24:'X'})[v] || v;
+    else if (k === 'fonte') v = ({14:'Pequena',18:'Média',22:'Grande',24:'Extra'})[v] || v;
 
     const p = ie ? '✏️ ' : ia ? '▶ ' : '  ';
-    drawText(pixelBuffer, 24, y + 6, `${p}${CLABEL[i]}`, 10, ia ? 10 : 80, 'system-ui');
-    drawText(pixelBuffer, W - 50, y + 6, String(v), 10, ie ? 0 : 100, 'system-ui');
+    drawText(pixelBuffer, 20, y + 7, `${p}${CLABEL[i]}`, 11, ia ? 10 : 80, 'system-ui', 300);
+    drawText(pixelBuffer, W - 60, y + 7, String(v), 11, ie ? 0 : 100, 'system-ui', 50);
 
-    y += 38;
+    y += 40;
   });
 
-  drawText(pixelBuffer, 10, H - 20, editMode ? '▲/▼ ajustar  ● confirmar  ●(1s) sair' : '▲/▼ navegar  ● editar  ●(1s) voltar', 9, 140, 'system-ui');
+  drawText(pixelBuffer, 10, H - 20,
+    editMode ? '▲/▼ ajustar  ● confirmar  ●(1s) sair' : '▲/▼ navegar  ● editar  ●(1s) voltar',
+    9, 140, 'system-ui', 460);
 }
 
 function renderDormindo() {
